@@ -53,9 +53,15 @@ class WorkerListScreen extends StatelessWidget {
                             letterSpacing: 1.2,
                           ),
                         ),
-                        Text(
-                          '依頼一覧',
-                          style: Theme.of(context).textTheme.headlineLarge,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '依頼一覧',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: Theme.of(context).textTheme.headlineLarge,
+                          ),
                         ),
                         Text(
                           '${requests.length}件の依頼があります',

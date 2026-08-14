@@ -77,9 +77,15 @@ class WorkerMapScreen extends StatelessWidget {
                             letterSpacing: 1.2,
                           ),
                         ),
-                        Text(
-                          '近くの除雪依頼',
-                          style: Theme.of(context).textTheme.headlineMedium,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '近くの除雪依頼',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
                         ),
                         Text(
                           AppConfig.showsDemoTools ? '新潟市中央区 • デモ地点' : '新潟市中央区',

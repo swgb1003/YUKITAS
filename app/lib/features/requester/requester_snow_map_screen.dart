@@ -80,9 +80,15 @@ class RequesterSnowMapScreen extends StatelessWidget {
                             letterSpacing: 1.2,
                           ),
                         ),
-                        Text(
-                          '地域雪マップ',
-                          style: Theme.of(context).textTheme.headlineMedium,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '地域雪マップ',
+                            maxLines: 1,
+                            softWrap: false,
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
                         ),
                         const Text(
                           '募集中・対応中を色で表示',

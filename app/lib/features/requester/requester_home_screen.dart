@@ -8,6 +8,7 @@ import '../../core/widgets/gradient_action_button.dart';
 import '../../core/widgets/mode_switch_button.dart';
 import '../../core/widgets/snow_map.dart';
 import '../../domain/requests/snow_request.dart';
+import '../../domain/stats/region_stats.dart';
 
 class RequesterHomeScreen extends StatelessWidget {
   const RequesterHomeScreen({
@@ -16,12 +17,14 @@ class RequesterHomeScreen extends StatelessWidget {
     required this.requests,
     required this.onOpenSnowMap,
     super.key,
+    this.stats = RegionStats.demo,
   });
 
   final VoidCallback onToggleMode;
   final VoidCallback onCreateRequest;
   final List<SnowRequest> requests;
   final VoidCallback onOpenSnowMap;
+  final RegionStats stats;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +45,7 @@ class RequesterHomeScreen extends StatelessWidget {
               _WeatherHero(
                 onToggleMode: onToggleMode,
                 onCreateRequest: onCreateRequest,
+                stats: stats,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
@@ -99,8 +103,10 @@ class _WeatherHero extends StatelessWidget {
   const _WeatherHero({
     required this.onToggleMode,
     required this.onCreateRequest,
+    required this.stats,
   });
 
+  final RegionStats stats;
   final VoidCallback onToggleMode;
   final VoidCallback onCreateRequest;
 
@@ -169,9 +175,15 @@ class _WeatherHero extends StatelessWidget {
                           letterSpacing: 1.7,
                         ),
                       ),
-                      Text(
-                        'おはようございます',
-                        style: Theme.of(context).textTheme.headlineMedium,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'おはようございます',
+                          maxLines: 1,
+                          softWrap: false,
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
                       ),
                       Text(
                         AppConfig.showsDemoTools
@@ -238,15 +250,29 @@ class _WeatherHero extends StatelessWidget {
               radius: 28,
               child: Column(
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Expanded(child: _Stat(value: '347', label: '本日完了')),
-                      SizedBox(width: 8),
                       Expanded(
-                        child: _Stat(value: '32', label: 'SOS支援', sos: true),
+                        child: _Stat(
+                          value: '${stats.completedToday}',
+                          label: '本日完了',
+                        ),
                       ),
-                      SizedBox(width: 8),
-                      Expanded(child: _Stat(value: '86', label: '活動中')),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _Stat(
+                          value: '${stats.sosSupportedToday}',
+                          label: 'SOS支援',
+                          sos: true,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _Stat(
+                          value: '${stats.activeNow}',
+                          label: '活動中',
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),

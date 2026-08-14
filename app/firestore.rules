@@ -260,5 +260,14 @@ service cloud.firestore {
         && request.auth.uid == userId
         && validUserProfile();
     }
+
+    // Region-wide activity counters (ホーム画面 本日完了/SOS支援/活動中) kept
+    // updated by the updateRegionStats Cloud Function via the Admin SDK.
+    // Aggregate counts only, no per-request detail, so any signed-in user
+    // may read them; nothing but the Admin SDK may write.
+    match /regionStats/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
   }
 }

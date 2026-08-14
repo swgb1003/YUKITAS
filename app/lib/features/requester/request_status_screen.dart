@@ -21,6 +21,7 @@ class RequestStatusScreen extends StatefulWidget {
     required this.onSubmitRating,
     required this.onFinish,
     super.key,
+    this.completedToday = 347,
   });
 
   final SnowRequest request;
@@ -28,6 +29,7 @@ class RequestStatusScreen extends StatefulWidget {
   final Future<bool> Function() onApproveCompletion;
   final Future<bool> Function(int rating, String? comment) onSubmitRating;
   final VoidCallback onFinish;
+  final int completedToday;
 
   @override
   State<RequestStatusScreen> createState() => _RequestStatusScreenState();
@@ -463,7 +465,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
               ),
             ),
             const SizedBox(height: 15),
-            const _LocalImpactCard(),
+            _LocalImpactCard(completedToday: widget.completedToday),
             const SizedBox(height: 17),
             GradientActionButton(
               key: const Key('rate-and-home'),
@@ -527,7 +529,16 @@ class _StatusHeader extends StatelessWidget {
                   letterSpacing: 1.4,
                 ),
               ),
-              Text(title, style: Theme.of(context).textTheme.headlineMedium),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+              ),
               Text(
                 subtitle,
                 style: const TextStyle(
@@ -655,7 +666,9 @@ class _MissionCompleteIcon extends StatelessWidget {
 }
 
 class _LocalImpactCard extends StatelessWidget {
-  const _LocalImpactCard();
+  const _LocalImpactCard({required this.completedToday});
+
+  final int completedToday;
 
   @override
   Widget build(BuildContext context) {
@@ -667,19 +680,19 @@ class _LocalImpactCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(23),
         border: Border.all(color: const Color(0xFFBCEDE1)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 24,
             backgroundColor: Colors.white,
             child: Icon(Icons.emoji_events_outlined, color: YukitasColors.safe),
           ),
-          SizedBox(width: 13),
+          const SizedBox(width: 13),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'LOCAL IMPACT',
                   style: TextStyle(
                     color: YukitasColors.safe,
@@ -687,13 +700,13 @@ class _LocalImpactCard extends StatelessWidget {
                     letterSpacing: 1.1,
                   ),
                 ),
-                Text(
+                const Text(
                   '地域の未除雪が1件減りました',
                   style: TextStyle(fontWeight: FontWeight.w900),
                 ),
                 Text(
-                  '本日の完了 347件',
-                  style: TextStyle(
+                  '本日の完了 $completedToday件',
+                  style: const TextStyle(
                     color: YukitasColors.muted,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,

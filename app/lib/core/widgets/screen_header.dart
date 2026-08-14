@@ -41,7 +41,16 @@ class YukitasScreenHeader extends StatelessWidget {
                   letterSpacing: 1.4,
                 ),
               ),
-              Text(title, style: Theme.of(context).textTheme.headlineLarge),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: Theme.of(context).textTheme.headlineLarge,
+                ),
+              ),
               Text(
                 subtitle,
                 style: Theme.of(

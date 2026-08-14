@@ -12,6 +12,7 @@ import '../core/widgets/yukitas_bottom_navigation.dart';
 import '../domain/places/saved_place_repository.dart';
 import '../domain/requests/request_repository.dart';
 import '../domain/requests/snow_request.dart';
+import '../domain/stats/region_stats_repository.dart';
 import '../features/common/profile_screen.dart';
 import '../features/requester/request_creation_flow.dart';
 import '../features/requester/request_history_screen.dart';
@@ -27,6 +28,7 @@ import '../features/worker/worker_request_detail_screen.dart';
 import '../infrastructure/notifications/demo_push_notification_service.dart';
 import '../infrastructure/places/in_memory_saved_place_repository.dart';
 import '../infrastructure/requests/in_memory_request_repository.dart';
+import '../infrastructure/stats/demo_region_stats_repository.dart';
 import 'user_mode.dart';
 
 class ModeShell extends StatefulWidget {
@@ -38,6 +40,8 @@ class ModeShell extends StatefulWidget {
     this.disposeSavedPlaceRepository = false,
     this.pushNotificationService,
     this.disposePushNotificationService = false,
+    this.regionStatsRepository,
+    this.disposeRegionStatsRepository = false,
     this.currentUserId = 'demo-worker-takumi',
     this.currentUserName = '佐藤 拓海さん',
     this.photoPicker,
@@ -52,6 +56,8 @@ class ModeShell extends StatefulWidget {
   final bool disposeSavedPlaceRepository;
   final PushNotificationService? pushNotificationService;
   final bool disposePushNotificationService;
+  final RegionStatsRepository? regionStatsRepository;
+  final bool disposeRegionStatsRepository;
   final String currentUserId;
   final String currentUserName;
   final RequestPhotoPicker? photoPicker;
@@ -67,6 +73,7 @@ class _ModeShellState extends State<ModeShell> {
   late final RequestRepository _repository;
   late final SavedPlaceRepository _savedPlaceRepository;
   late final PushNotificationService _pushNotificationService;
+  late final RegionStatsRepository _regionStatsRepository;
   UserMode _mode = UserMode.requester;
   int _requesterIndex = 0;
   int _workerIndex = 0;
@@ -93,9 +100,12 @@ class _ModeShellState extends State<ModeShell> {
         widget.savedPlaceRepository ?? InMemorySavedPlaceRepository();
     _pushNotificationService =
         widget.pushNotificationService ?? DemoPushNotificationService();
+    _regionStatsRepository =
+        widget.regionStatsRepository ?? DemoRegionStatsRepository();
     _restoreActiveRequest();
     _repository.addListener(_repositoryChanged);
     _savedPlaceRepository.addListener(_savedPlacesChanged);
+    _regionStatsRepository.addListener(_regionStatsChanged);
     unawaited(
       _pushNotificationService.initialize().then(
         (_) => _pushNotificationService.setWorkerSubscribed(
@@ -123,6 +133,12 @@ class _ModeShellState extends State<ModeShell> {
         _pushNotificationService is ChangeNotifier) {
       (_pushNotificationService as ChangeNotifier).dispose();
     }
+    _regionStatsRepository.removeListener(_regionStatsChanged);
+    if ((widget.regionStatsRepository == null ||
+            widget.disposeRegionStatsRepository) &&
+        _regionStatsRepository is ChangeNotifier) {
+      (_regionStatsRepository as ChangeNotifier).dispose();
+    }
     super.dispose();
   }
 
@@ -132,6 +148,11 @@ class _ModeShellState extends State<ModeShell> {
   }
 
   void _savedPlacesChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _regionStatsChanged() {
     if (!mounted) return;
     setState(() {});
   }
@@ -412,6 +433,7 @@ class _ModeShellState extends State<ModeShell> {
         onCreateRequest: _startRequestCreation,
         requests: _mapVisibleRequests,
         onOpenSnowMap: () => _selectDestination(1),
+        stats: _regionStatsRepository.stats,
       ),
       1 => RequesterSnowMapScreen(
         key: const ValueKey('requester-snow-map'),
@@ -424,6 +446,7 @@ class _ModeShellState extends State<ModeShell> {
         onApproveCompletion: _approveCompletion,
         onSubmitRating: _submitRating,
         onFinish: () => _finishActiveRequest(),
+        completedToday: _regionStatsRepository.stats.completedToday,
       ),
       2 => RequestHistoryScreen(
         key: const ValueKey('requester-history'),
