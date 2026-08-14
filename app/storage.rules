@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function requestDocument(requestId) {
+      return firestore.get(
+        /databases/(default)/documents/requests/$(requestId)
+      );
+    }
+
+    function requestDocumentExists(requestId) {
+      return firestore.exists(
+        /databases/(default)/documents/requests/$(requestId)
+      );
+    }
+
+    function canReadRequestMedia(requestId) {
+      let requestData = requestDocument(requestId).data;
+      return signedIn() && (
+        requestData.status == 'waiting'
+        || requestData.ownerId == request.auth.uid
+        || requestData.workerId == request.auth.uid
+      );
+    }
+
+    function isValidImageUpload() {
+      return request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    function canDeleteBeforePhoto(requestId) {
+      return !requestDocumentExists(requestId) || (
+        requestDocument(requestId).data.ownerId == request.auth.uid
+        && requestDocument(requestId).data.status == 'waiting'
+      );
+    }
+
+    match /requestMedia/{requestId}/before/{uploaderId}/{fileName} {
+      allow read: if canReadRequestMedia(requestId);
+      allow create: if signedIn()
+        && uploaderId == request.auth.uid
+        && isValidImageUpload()
+        && request.resource.metadata.requestId == requestId
+        && request.resource.metadata.kind == 'before'
+        && request.resource.metadata.uploaderId == request.auth.uid;
+      allow update: if false;
+      allow delete: if signedIn()
+        && uploaderId == request.auth.uid
+        && canDeleteBeforePhoto(requestId);
+    }
+
+    match /requestMedia/{requestId}/after/{uploaderId}/{fileName} {
+      allow read: if canReadRequestMedia(requestId);
+      allow create: if signedIn()
+        && uploaderId == request.auth.uid
+        && isValidImageUpload()
+        && requestDocument(requestId).data.workerId == request.auth.uid
+        && requestDocument(requestId).data.status == 'working'
+        && request.resource.metadata.requestId == requestId
+        && request.resource.metadata.kind == 'after'
+        && request.resource.metadata.uploaderId == request.auth.uid;
+      allow update: if false;
+      allow delete: if signedIn()
+        && uploaderId == request.auth.uid
+        && requestDocument(requestId).data.workerId == request.auth.uid
+        && requestDocument(requestId).data.status == 'working';
+    }
+  }
+}

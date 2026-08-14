@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "652126797744",
+    "project_id": "yukitas-app",
+    "storage_bucket": "yukitas-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:652126797744:android:251849c7f54da07128e075",
+        "android_client_info": {
+          "package_name": "jp.yukitas.yukitas"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "652126797744-g15t94dpken1u3r3vh169r096lbbe7aq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "jp.yukitas.yukitas",
+            "certificate_hash": "5be1218d189270b34576124a7bd644399c2931e4"
+          }
+        },
+        {
+          "client_id": "652126797744-cjn02942tutruqhjvc7irlkuv20m26b3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5NV7qcvp3Mk2iwqw9LDUG82oSWff9MR4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "652126797744-cjn02942tutruqhjvc7irlkuv20m26b3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,9 @@
+# Claude Code session/tool state - not part of the project
+.claude/
+
+# Scratch files used while extracting the spec PDF during development
+tmp/
+
+# OS cruft
+.DS_Store
+Thumbs.db

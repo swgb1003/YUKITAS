@@ -1,0 +1,264 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    function usesServerTime(field) {
+      return request.resource.data[field] == request.time;
+    }
+
+    function validNewRequest(requestId) {
+      let data = request.resource.data;
+      let required = [
+        'schemaVersion',
+        'ownerId',
+        'placeName',
+        'approximateAddress',
+        'location',
+        'workAreas',
+        'areaSqm',
+        'snowDepthCm',
+        'difficulty',
+        'estimatedMinutes',
+        'priceYen',
+        'distanceKm',
+        'isSos',
+        'sosReason',
+        'beforeImageAsset',
+        'status',
+        'createdAt',
+        'workerId',
+        'workerName',
+        'acceptedAt',
+        'movingAt',
+        'arrivedAt',
+        'safetyConfirmedAt',
+        'startedAt',
+        'afterImageAsset',
+        'workMemo',
+        'submittedAt',
+        'completedAt',
+        'paymentStatus',
+        'rating',
+        'ratingComment',
+        'updatedAt'
+      ];
+      return data.keys().hasAll(required)
+        && data.keys().hasOnly(required)
+        && data.schemaVersion == 1
+        && data.ownerId == request.auth.uid
+        && data.placeName is string
+        && data.placeName.size() > 0
+        && data.placeName.size() <= 100
+        && data.approximateAddress is string
+        && data.approximateAddress.size() > 0
+        && data.approximateAddress.size() <= 100
+        && data.location is latlng
+        && data.workAreas is list
+        && data.workAreas.size() > 0
+        && data.workAreas.size() <= 10
+        && data.areaSqm is number
+        && data.areaSqm > 0
+        && data.areaSqm <= 10000
+        && data.snowDepthCm is int
+        && data.snowDepthCm >= 0
+        && data.snowDepthCm <= 1000
+        && data.difficulty is int
+        && data.difficulty >= 1
+        && data.difficulty <= 5
+        && data.estimatedMinutes is int
+        && data.estimatedMinutes > 0
+        && data.estimatedMinutes <= 1440
+        && data.priceYen is int
+        && data.priceYen >= 0
+        && data.priceYen <= 1000000
+        && data.distanceKm is number
+        && data.distanceKm >= 0
+        && data.isSos is bool
+        && (data.sosReason == null || data.sosReason is string)
+        && data.beforeImageAsset is string
+        && (
+          data.beforeImageAsset == 'assets/images/before_driveway.png'
+          || data.beforeImageAsset.matches(
+            'requestMedia/' + requestId + '/before/' + request.auth.uid + '/[^/]+'
+          )
+        )
+        && data.status == 'waiting'
+        && data.createdAt is timestamp
+        && data.createdAt == request.time
+        && data.workerId == null
+        && data.workerName == null
+        && data.acceptedAt == null
+        && data.movingAt == null
+        && data.arrivedAt == null
+        && data.safetyConfirmedAt == null
+        && data.startedAt == null
+        && data.afterImageAsset == null
+        && data.workMemo == null
+        && data.submittedAt == null
+        && data.completedAt == null
+        && data.paymentStatus == 'authorized'
+        && data.rating == null
+        && data.ratingComment == null
+        && data.updatedAt == request.time;
+    }
+
+    function workerAccepts() {
+      return resource.data.status == 'waiting'
+        && resource.data.workerId == null
+        && request.auth.uid != resource.data.ownerId
+        && request.resource.data.status == 'matched'
+        && request.resource.data.workerId == request.auth.uid
+        && request.resource.data.workerName is string
+        && request.resource.data.workerName.size() > 0
+        && request.resource.data.workerName.size() <= 80
+        && changedOnly(['status', 'workerId', 'workerName', 'acceptedAt', 'updatedAt'])
+        && usesServerTime('acceptedAt')
+        && usesServerTime('updatedAt');
+    }
+
+    function assignedWorkerMoves() {
+      return resource.data.workerId == request.auth.uid
+        && resource.data.status == 'matched'
+        && request.resource.data.status == 'moving'
+        && changedOnly(['status', 'movingAt', 'updatedAt'])
+        && usesServerTime('movingAt')
+        && usesServerTime('updatedAt');
+    }
+
+    function assignedWorkerArrives() {
+      return resource.data.workerId == request.auth.uid
+        && resource.data.status == 'moving'
+        && request.resource.data.status == 'arrived'
+        && changedOnly(['status', 'arrivedAt', 'updatedAt'])
+        && usesServerTime('arrivedAt')
+        && usesServerTime('updatedAt');
+    }
+
+    function assignedWorkerStarts() {
+      return resource.data.workerId == request.auth.uid
+        && resource.data.status == 'arrived'
+        && request.resource.data.status == 'working'
+        && changedOnly(['status', 'safetyConfirmedAt', 'startedAt', 'updatedAt'])
+        && usesServerTime('safetyConfirmedAt')
+        && usesServerTime('startedAt')
+        && usesServerTime('updatedAt');
+    }
+
+    function assignedWorkerSubmits(requestId) {
+      return resource.data.workerId == request.auth.uid
+        && resource.data.status == 'working'
+        && request.resource.data.status == 'reviewing'
+        && request.resource.data.afterImageAsset is string
+        && (
+          request.resource.data.afterImageAsset == 'assets/images/after_driveway.png'
+          || request.resource.data.afterImageAsset.matches(
+            'requestMedia/' + requestId + '/after/' + request.auth.uid + '/[^/]+'
+          )
+        )
+        && request.resource.data.workMemo is string
+        && request.resource.data.workMemo.size() > 0
+        && request.resource.data.workMemo.size() <= 1000
+        && changedOnly(['status', 'afterImageAsset', 'workMemo', 'submittedAt', 'updatedAt'])
+        && usesServerTime('submittedAt')
+        && usesServerTime('updatedAt');
+    }
+
+    function ownerApproves() {
+      return resource.data.ownerId == request.auth.uid
+        && resource.data.status == 'reviewing'
+        && resource.data.afterImageAsset is string
+        && resource.data.workMemo is string
+        && request.resource.data.status == 'completed'
+        && request.resource.data.paymentStatus == 'paid'
+        && changedOnly(['status', 'completedAt', 'paymentStatus', 'updatedAt'])
+        && usesServerTime('completedAt')
+        && usesServerTime('updatedAt');
+    }
+
+    function ownerRates() {
+      return resource.data.ownerId == request.auth.uid
+        && resource.data.status == 'completed'
+        && resource.data.paymentStatus == 'paid'
+        && request.resource.data.status == 'completed'
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && (request.resource.data.ratingComment == null
+          || (request.resource.data.ratingComment is string
+            && request.resource.data.ratingComment.size() <= 1000))
+        && changedOnly(['rating', 'ratingComment', 'updatedAt'])
+        && usesServerTime('updatedAt');
+    }
+
+    match /requests/{requestId} {
+      allow read: if signedIn() && (
+        resource.data.status == 'waiting'
+        || resource.data.ownerId == request.auth.uid
+        || resource.data.workerId == request.auth.uid
+      );
+      allow create: if signedIn() && validNewRequest(requestId);
+      allow update: if signedIn() && (
+        workerAccepts()
+        || assignedWorkerMoves()
+        || assignedWorkerArrives()
+        || assignedWorkerStarts()
+        || assignedWorkerSubmits(requestId)
+        || ownerApproves()
+        || ownerRates()
+      );
+      allow delete: if false;
+    }
+
+    function validSavedPlace() {
+      let data = request.resource.data;
+      return data.label is string
+        && data.label.size() > 0
+        && data.label.size() <= 30
+        && data.approximateAddress is string
+        && data.approximateAddress.size() > 0
+        && data.approximateAddress.size() <= 100
+        && data.location is latlng
+        && (data.beneficiaryName == null
+          || (data.beneficiaryName is string && data.beneficiaryName.size() <= 30))
+        && data.notifyOnSnowfall is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Saved places (自宅・遠隔家族宅) are private to their owner - nobody
+    // else has a reason to see a requester's registered addresses.
+    match /users/{userId}/savedPlaces/{placeId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && validSavedPlace();
+      allow delete: if signedIn() && request.auth.uid == userId;
+    }
+
+    function validUserProfile() {
+      let data = request.resource.data;
+      return data.fcmTokens is list
+        && data.fcmTokens.size() <= 20
+        && data.updatedAt is timestamp;
+    }
+
+    // Holds this user's FCM device tokens (see FirebasePushNotificationService)
+    // so Cloud Functions can push request-status updates to them. Cloud
+    // Functions itself writes/reads via the Admin SDK, which bypasses these
+    // rules entirely - this only governs client access.
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if signedIn()
+        && request.auth.uid == userId
+        && validUserProfile();
+    }
+  }
+}
