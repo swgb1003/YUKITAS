@@ -618,19 +618,28 @@ class _ModeDescriptionCard extends StatelessWidget {
         children: [
           Icon(icon, size: 29, color: YukitasColors.ink),
           const SizedBox(height: 8),
-          Text(
-            title,
-            maxLines: 1,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontSize: 15),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              title,
+              maxLines: 1,
+              softWrap: false,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontSize: 15),
+            ),
           ),
           const SizedBox(height: 3),
-          Text(
-            subtitle,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: YukitasColors.muted),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              subtitle,
+              maxLines: 1,
+              softWrap: false,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: YukitasColors.muted),
+            ),
           ),
         ],
       ),

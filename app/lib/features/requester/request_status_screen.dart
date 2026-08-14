@@ -970,16 +970,23 @@ class _ProgressMetric extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: YukitasColors.muted,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              style: const TextStyle(
+                color: YukitasColors.muted,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: YukitasColors.deep,
               fontSize: 18,

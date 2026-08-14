@@ -27,6 +27,7 @@ class RequestCreationFlow extends StatefulWidget {
     this.savedPlaces = const <SavedPlace>[],
     this.photoPicker,
     this.photoStorage = const DemoRequestPhotoStorage(),
+    this.nearbyWaitingCount = 0,
     super.key,
   });
 
@@ -35,6 +36,10 @@ class RequestCreationFlow extends StatefulWidget {
   final List<SavedPlace> savedPlaces;
   final RequestPhotoPicker? photoPicker;
   final RequestPhotoStorage photoStorage;
+
+  /// Unclaimed (waiting) requests nearby right now - feeds the estimate's
+  /// demand surcharge (see EstimateCalculator).
+  final int nearbyWaitingCount;
 
   @override
   State<RequestCreationFlow> createState() => _RequestCreationFlowState();
@@ -146,7 +151,10 @@ class _RequestCreationFlowState extends State<RequestCreationFlow> {
       if (!mounted) return;
       setState(() {
         _analysis = analysis;
-        _estimate = _calculator.calculate(analysis);
+        _estimate = _calculator.calculate(
+          analysis,
+          nearbyWaitingCount: widget.nearbyWaitingCount,
+        );
         _isManualEstimate = false;
         _loading = false;
       });
@@ -192,7 +200,10 @@ class _RequestCreationFlowState extends State<RequestCreationFlow> {
     if (result == null || !mounted) return;
     setState(() {
       _analysis = result;
-      _estimate = _calculator.calculate(result);
+      _estimate = _calculator.calculate(
+        result,
+        nearbyWaitingCount: widget.nearbyWaitingCount,
+      );
       _isManualEstimate = true;
       _analysisError = null;
     });
@@ -211,7 +222,10 @@ class _RequestCreationFlowState extends State<RequestCreationFlow> {
     if (!mounted) return;
     setState(() {
       _analysis = analysis;
-      _estimate = _calculator.calculate(analysis);
+      _estimate = _calculator.calculate(
+        analysis,
+        nearbyWaitingCount: widget.nearbyWaitingCount,
+      );
       _isManualEstimate = false;
       _loading = false;
     });
@@ -537,7 +551,11 @@ class _PhotoStep extends StatelessWidget {
                             ? null
                             : () => onPickPhoto(RequestPhotoSource.camera),
                     icon: const Icon(Icons.camera_alt_outlined),
-                    label: const Text('撮影する'),
+                    label: const Text(
+                      '撮影する',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -549,7 +567,11 @@ class _PhotoStep extends StatelessWidget {
                             ? null
                             : () => onPickPhoto(RequestPhotoSource.gallery),
                     icon: const Icon(Icons.photo_library_outlined),
-                    label: const Text('写真を選ぶ'),
+                    label: const Text(
+                      '写真を選ぶ',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ],
@@ -963,6 +985,8 @@ class _MetricCard extends StatelessWidget {
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: YukitasColors.muted,
               fontSize: 12,
@@ -974,6 +998,8 @@ class _MetricCard extends StatelessWidget {
             children: [
               Text(
                 value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: YukitasColors.ink,
                   fontSize: 29,
@@ -1099,10 +1125,12 @@ class _EstimateStep extends StatelessWidget {
                 const Divider(height: 30),
                 _PriceRow(label: '基本料金', value: estimate.baseFeeYen),
                 _PriceRow(
-                  label: '作業時間 40円 × ${analysis.estimatedMinutes}分',
+                  label: '作業時間 50円 × ${analysis.estimatedMinutes}分',
                   value: estimate.timeFeeYen,
                 ),
                 _PriceRow(label: '難易度補正', value: estimate.difficultyFeeYen),
+                if (estimate.demandFeeYen > 0)
+                  _PriceRow(label: '需要補正', value: estimate.demandFeeYen),
               ],
             ),
           ),

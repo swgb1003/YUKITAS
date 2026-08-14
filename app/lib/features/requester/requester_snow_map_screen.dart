@@ -165,12 +165,20 @@ class _LegendItem extends StatelessWidget {
             children: [
               SnowMapLegendDot(color: color),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: YukitasColors.muted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: const TextStyle(
+                      color: YukitasColors.muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -178,6 +186,8 @@ class _LegendItem extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             '$count',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: YukitasColors.ink,
               fontSize: 20,

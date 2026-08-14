@@ -1243,13 +1243,23 @@ class _SummaryRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: YukitasColors.muted,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w900)),
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ),
       ],
     );
   }
@@ -1272,16 +1282,23 @@ class _WorkMetric extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: YukitasColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              style: const TextStyle(
+                color: YukitasColors.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: YukitasColors.deep,
               fontSize: 21,

@@ -207,12 +207,17 @@ class _SummaryStat extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 3),
-          Text(
-            label,
-            style: const TextStyle(
-              color: YukitasColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              style: const TextStyle(
+                color: YukitasColors.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -689,6 +694,8 @@ class _DetailRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: YukitasColors.muted,
               fontWeight: FontWeight.w600,
@@ -699,6 +706,8 @@ class _DetailRow extends StatelessWidget {
           child: Text(
             value,
             textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
         ),

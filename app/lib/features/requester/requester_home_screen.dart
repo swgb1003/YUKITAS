@@ -319,6 +319,8 @@ class _Stat extends StatelessWidget {
         children: [
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: sos ? YukitasColors.sos : YukitasColors.ink,
               fontSize: 28,
@@ -326,12 +328,17 @@ class _Stat extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              color: YukitasColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              style: const TextStyle(
+                color: YukitasColors.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

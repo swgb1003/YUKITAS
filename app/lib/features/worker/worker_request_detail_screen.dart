@@ -34,137 +34,143 @@ class _WorkerRequestDetailScreenState extends State<WorkerRequestDetailScreen> {
       context: context,
       barrierColor: const Color(0x990B2E47),
       builder:
-          (dialogContext) => BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-            child: Dialog(
-              insetPadding: const EdgeInsets.all(22),
-              backgroundColor: Colors.transparent,
-              child: FrostedCard(
-                padding: const EdgeInsets.all(24),
-                radius: 30,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 68,
-                      height: 68,
-                      decoration: BoxDecoration(
-                        color: YukitasColors.ice,
-                        borderRadius: BorderRadius.circular(24),
+          (dialogContext) => RepaintBoundary(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Dialog(
+                insetPadding: const EdgeInsets.all(22),
+                backgroundColor: Colors.transparent,
+                child: FrostedCard(
+                  padding: const EdgeInsets.all(24),
+                  radius: 30,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(
+                          color: YukitasColors.ice,
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: const Icon(
+                          Icons.verified_user_outlined,
+                          color: YukitasColors.worker,
+                          size: 34,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.verified_user_outlined,
-                        color: YukitasColors.worker,
-                        size: 34,
+                      const SizedBox(height: 16),
+                      const Text(
+                        'ACCEPT REQUEST',
+                        style: TextStyle(
+                          color: YukitasColors.action,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.3,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'ACCEPT REQUEST',
-                      style: TextStyle(
-                        color: YukitasColors.action,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.3,
+                      Text(
+                        'この依頼を受けますか？',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineMedium,
                       ),
-                    ),
-                    Text(
-                      'この依頼を受けますか？',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '受注後、依頼者にプロフィールと\n到着予定時刻が共有されます',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: YukitasColors.muted,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(height: 8),
+                      const Text(
+                        '受注後、依頼者にプロフィールと\n到着予定時刻が共有されます',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: YukitasColors.muted,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: YukitasColors.snow,
-                        borderRadius: BorderRadius.circular(19),
-                        border: Border.all(color: YukitasColors.outline),
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: YukitasColors.snow,
+                          borderRadius: BorderRadius.circular(19),
+                          border: Border.all(color: YukitasColors.outline),
+                        ),
+                        child: Column(
+                          children: [
+                            _ConfirmRow(
+                              label: '報酬',
+                              value: formatYen(widget.request.priceYen),
+                              emphasized: true,
+                            ),
+                            const Divider(height: 22),
+                            _ConfirmRow(
+                              label: '目安時間',
+                              value: '約${widget.request.estimatedMinutes}分',
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Column(
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE9FBF6),
+                          borderRadius: BorderRadius.circular(17),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_outline,
+                              color: YukitasColors.safe,
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '屋根・公道・重機作業は行いません',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
                         children: [
-                          _ConfirmRow(
-                            label: '報酬',
-                            value: formatYen(widget.request.priceYen),
-                            emphasized: true,
-                          ),
-                          const Divider(height: 22),
-                          _ConfirmRow(
-                            label: '目安時間',
-                            value: '約${widget.request.estimatedMinutes}分',
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE9FBF6),
-                        borderRadius: BorderRadius.circular(17),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            color: YukitasColors.safe,
-                          ),
-                          SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              '屋根・公道・重機作業は行いません',
-                              style: TextStyle(fontWeight: FontWeight.w700),
+                            child: OutlinedButton(
+                              onPressed:
+                                  () => Navigator.of(dialogContext).pop(false),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size.fromHeight(54),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                              ),
+                              child: const Text('戻る'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: FilledButton.icon(
+                              key: const Key('confirm-accept-request'),
+                              onPressed:
+                                  () => Navigator.of(dialogContext).pop(true),
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size.fromHeight(54),
+                                backgroundColor: YukitasColors.worker,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                              ),
+                              icon: const Icon(Icons.check_rounded),
+                              label: const Text(
+                                '受注を確定',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed:
-                                () => Navigator.of(dialogContext).pop(false),
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(54),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                            ),
-                            child: const Text('戻る'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 2,
-                          child: FilledButton.icon(
-                            key: const Key('confirm-accept-request'),
-                            onPressed:
-                                () => Navigator.of(dialogContext).pop(true),
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(54),
-                              backgroundColor: YukitasColors.worker,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                            ),
-                            icon: const Icon(Icons.check_rounded),
-                            label: const Text('受注を確定'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -436,6 +442,8 @@ class _DetailMetric extends StatelessWidget {
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
               color: YukitasColors.muted,
               fontSize: 12,
@@ -444,6 +452,8 @@ class _DetailMetric extends StatelessWidget {
           ),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w500),
           ),
         ],

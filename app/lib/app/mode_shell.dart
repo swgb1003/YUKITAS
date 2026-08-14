@@ -347,6 +347,7 @@ class _ModeShellState extends State<ModeShell> {
               savedPlaces: _savedPlaceRepository.places,
               photoPicker: widget.photoPicker,
               photoStorage: widget.photoStorage,
+              nearbyWaitingCount: _availableRequests.length,
             ),
       ),
     );

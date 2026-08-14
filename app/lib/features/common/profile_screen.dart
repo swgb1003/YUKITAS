@@ -452,12 +452,17 @@ class _ProfileStat extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          Text(
-            label,
-            style: const TextStyle(
-              color: YukitasColors.muted,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              style: const TextStyle(
+                color: YukitasColors.muted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

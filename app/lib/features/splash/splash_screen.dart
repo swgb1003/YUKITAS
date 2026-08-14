@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../app/app_routes.dart';
 import '../../core/theme/yukitas_colors.dart';
 import '../../core/widgets/gradient_action_button.dart';
-import '../../core/widgets/yukitas_snow_logo.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key, this.nextRoute = AppRoutes.login});
@@ -54,8 +53,6 @@ class SplashScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const YukitasSnowLogo(size: 86),
-                    const SizedBox(height: 28),
                     Text(
                       'YUKITAS',
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(

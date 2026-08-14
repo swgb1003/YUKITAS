@@ -59,9 +59,22 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+# Run `dart run flutter_launcher_icons` after changing assets/icon/*.png to
+# regenerate the Android launcher icons (legacy mipmap-*/ic_launcher.png plus
+# the adaptive icon XML). app_icon_foreground.png is the artwork padded to
+# Android's adaptive-icon safe zone (66% content diameter) so circle/squircle
+# launcher masks never clip the shovel figure or wordmark.
+flutter_launcher_icons:
+  android: true
+  image_path: assets/icon/app_icon_flat.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/icon/app_icon_foreground.png
+  min_sdk_android: 23
 
 # The following section is specific to Flutter packages.
 flutter:
