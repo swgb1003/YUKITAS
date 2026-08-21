@@ -282,7 +282,8 @@ class _ModeShellState extends State<ModeShell> {
         final assignedRequest = _latestRequestWhere(
           (request) =>
               request.workerId == widget.currentUserId &&
-              _isActiveWorkerStatus(request.status),
+              _isActiveWorkerStatus(request.status) &&
+              !_isFinished(request),
         );
         if (assignedRequest != null) {
           _activeAssignedRequestId = assignedRequest.id;
@@ -298,7 +299,8 @@ class _ModeShellState extends State<ModeShell> {
         final ownedRequest = _latestRequestWhere(
           (request) =>
               request.ownerId == widget.currentUserId &&
-              _isTrackedStatus(request.status),
+              _isTrackedStatus(request.status) &&
+              !_isFinished(request),
         );
         if (ownedRequest != null) {
           _activeOwnedRequestId = ownedRequest.id;
