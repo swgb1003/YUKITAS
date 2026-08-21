@@ -24,7 +24,6 @@ void main() {
         difficulty: 2,
         estimatedMinutes: 30,
         priceYen: 2000,
-        distanceKm: 1.2,
         isSos: false,
         sosReason: null,
         beforeImageAsset: 'assets/images/before_driveway.png',

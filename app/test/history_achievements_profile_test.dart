@@ -29,7 +29,6 @@ SnowRequest _completedRequest({
     difficulty: 3,
     estimatedMinutes: 40,
     priceYen: priceYen,
-    distanceKm: 0.8,
     isSos: isSos,
     sosReason: isSos ? '高齢の家族宅' : null,
     beforeImageAsset: 'assets/images/before_driveway.png',

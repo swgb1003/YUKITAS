@@ -18,7 +18,6 @@ SnowRequest _waitingRequest() {
     difficulty: 3,
     estimatedMinutes: 45,
     priceYen: 3200,
-    distanceKm: 0.8,
     isSos: false,
     sosReason: null,
     beforeImageAsset: 'assets/images/before_driveway.png',
@@ -79,21 +78,96 @@ void main() {
     expect(repository.findById('cancel-request')?.status, RequestStatus.waiting);
   });
 
-  test('a request already matched to a worker cannot be cancelled this way', () async {
+  test('the owner can still cancel after a worker has accepted but not '
+      'started', () async {
+    for (final status in [
+      RequestStatus.matched,
+      RequestStatus.moving,
+      RequestStatus.arrived,
+    ]) {
+      final repository = InMemoryRequestRepository(
+        seedRequests: [
+          _waitingRequest().copyWith(status: status, workerId: 'worker-1'),
+        ],
+      );
+      addTearDown(repository.dispose);
+
+      final succeeded = await repository.cancel(
+        requestId: 'cancel-request',
+        ownerId: 'demo-worker-takumi',
+        reason: 'ワーカーが到着しないため',
+      );
+
+      expect(succeeded, isTrue, reason: 'should be cancellable from $status');
+      expect(
+        repository.findById('cancel-request')?.status,
+        RequestStatus.cancelled,
+      );
+    }
+  });
+
+  test('cancelling stops once the worker has actually started clearing snow', () async {
+    // From here on there is labour to account for, so the way out is a
+    // dispute with a resolution rather than a unilateral cancel.
+    for (final status in [RequestStatus.working, RequestStatus.reviewing]) {
+      final repository = InMemoryRequestRepository(
+        seedRequests: [
+          _waitingRequest().copyWith(status: status, workerId: 'worker-1'),
+        ],
+      );
+      addTearDown(repository.dispose);
+
+      final succeeded = await repository.cancel(
+        requestId: 'cancel-request',
+        ownerId: 'demo-worker-takumi',
+        reason: 'やっぱりやめたい',
+      );
+
+      expect(succeeded, isFalse, reason: 'should be blocked at $status');
+    }
+  });
+
+  test('a worker who cannot make it hands the job back to the pool', () async {
     final repository = InMemoryRequestRepository(
       seedRequests: [
         _waitingRequest().copyWith(
-          status: RequestStatus.matched,
+          status: RequestStatus.moving,
+          workerId: 'worker-1',
+          workerName: '佐藤 拓海さん',
+        ),
+      ],
+    );
+    addTearDown(repository.dispose);
+
+    final succeeded = await repository.releaseAssignment(
+      requestId: 'cancel-request',
+      workerId: 'worker-1',
+      reason: '車が動かなくなったため',
+    );
+
+    expect(succeeded, isTrue);
+    final updated = repository.findById('cancel-request');
+    expect(updated?.status, RequestStatus.waiting);
+    expect(updated?.workerId, isNull);
+    expect(updated?.workerName, isNull);
+    expect(updated?.acceptedAt, isNull);
+  });
+
+  test('a worker cannot hand back a job once it is under way', () async {
+    final repository = InMemoryRequestRepository(
+      seedRequests: [
+        _waitingRequest().copyWith(
+          status: RequestStatus.working,
           workerId: 'worker-1',
         ),
       ],
     );
     addTearDown(repository.dispose);
 
-    final succeeded = await repository.cancel(
+    final succeeded = await repository.releaseAssignment(
       requestId: 'cancel-request',
-      ownerId: 'demo-worker-takumi',
-      reason: 'やっぱりやめたい',
+      workerId: 'worker-1',
+      reason: '面倒になった',
     );
 
     expect(succeeded, isFalse);

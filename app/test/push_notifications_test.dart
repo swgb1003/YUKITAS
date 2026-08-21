@@ -19,7 +19,10 @@ class _FakePushNotificationService extends ChangeNotifier
   Future<void> initialize() async {}
 
   @override
-  Future<void> setWorkerSubscribed(bool subscribed) async {}
+  Future<void> setWorkerSubscribed(
+    bool subscribed, {
+    List<String> cells = const <String>[],
+  }) async {}
 
   @override
   void markAllRead() {

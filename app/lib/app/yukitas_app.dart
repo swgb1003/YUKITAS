@@ -6,6 +6,7 @@ import '../application/media/request_photo_service.dart';
 import '../application/notifications/push_notification_service.dart';
 import '../application/requests/snow_analysis_provider.dart';
 import '../core/theme/yukitas_theme.dart';
+import '../core/widgets/snow_map.dart';
 import '../features/auth/login_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../infrastructure/media/firebase_request_photo_storage.dart';
@@ -13,6 +14,7 @@ import '../infrastructure/media/image_picker_request_photo_picker.dart';
 import '../infrastructure/notifications/firebase_push_notification_service.dart';
 import '../infrastructure/places/firestore_saved_place_repository.dart';
 import '../infrastructure/requests/cloud_function_snow_analysis_provider.dart';
+import '../infrastructure/requests/firestore_request_board_repository.dart';
 import '../infrastructure/requests/firestore_request_repository.dart';
 import '../infrastructure/stats/firestore_region_stats_repository.dart';
 import '../infrastructure/weather/firestore_weather_forecast_repository.dart';
@@ -83,6 +85,13 @@ class YukitasApp extends StatelessWidget {
               disposeRegionStatsRepository: true,
               weatherForecastRepository: FirestoreWeatherForecastRepository(),
               disposeWeatherForecastRepository: true,
+              // Starts on the demo origin and re-scopes once ModeShell has
+              // resolved the device's real position.
+              boardRepository: FirestoreRequestBoardRepository(
+                latitude: niigataCenter.latitude,
+                longitude: niigataCenter.longitude,
+              ),
+              disposeBoardRepository: true,
               currentUserId: user.id,
               currentUserName:
                   displayName == null || displayName.isEmpty

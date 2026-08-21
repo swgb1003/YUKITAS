@@ -16,9 +16,18 @@ abstract interface class PushNotificationService implements Listenable {
   /// [notifications] stays empty.
   Future<void> initialize();
 
-  /// Workers get pushed newly published requests via the 'workers' FCM
-  /// topic; requesters don't need it. Call whenever the user's mode changes.
-  Future<void> setWorkerSubscribed(bool subscribed);
+  /// Subscribes a worker to new-request pushes for the areas they are in.
+  ///
+  /// [cells] are geohash cells (see `lib/core/geo/geo_cell.dart`); one FCM
+  /// topic per cell. This used to be a single global 'workers' topic, which
+  /// pushed every request in the country to every worker in it. Requesters
+  /// don't need any of these - pass `subscribed: false`.
+  ///
+  /// Call whenever the user's mode or position changes.
+  Future<void> setWorkerSubscribed(
+    bool subscribed, {
+    List<String> cells = const <String>[],
+  });
 
   void markAllRead();
 }

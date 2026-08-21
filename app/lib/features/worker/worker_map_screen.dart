@@ -8,7 +8,7 @@ import '../../core/widgets/frosted_card.dart';
 import '../../core/widgets/gradient_action_button.dart';
 import '../../core/widgets/mode_switch_button.dart';
 import '../../core/widgets/snow_map.dart';
-import '../../domain/requests/snow_request.dart';
+import '../../domain/requests/request_summary.dart';
 
 class WorkerMapScreen extends StatelessWidget {
   const WorkerMapScreen({
@@ -16,15 +16,22 @@ class WorkerMapScreen extends StatelessWidget {
     required this.onOpenList,
     required this.requests,
     required this.onOpenRequest,
+    required this.originLatitude,
+    required this.originLongitude,
     super.key,
   });
 
   final VoidCallback onToggleMode;
   final VoidCallback onOpenList;
-  final List<SnowRequest> requests;
-  final ValueChanged<SnowRequest> onOpenRequest;
+  final List<RequestSummary> requests;
+  final ValueChanged<RequestSummary> onOpenRequest;
 
-  SnowRequest? get nearbyRequest => requests.isEmpty ? null : requests.first;
+  /// The worker's own position. Distance is measured from here rather than
+  /// read off the request, which used to carry one fixed number for everyone.
+  final double originLatitude;
+  final double originLongitude;
+
+  RequestSummary? get nearbyRequest => requests.isEmpty ? null : requests.first;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +42,17 @@ class WorkerMapScreen extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: SnowMap(requests: requests, onTapRequest: onOpenRequest),
+              child: SnowMap(
+                pins: requests.map(MapPin.fromSummary).toList(),
+                onTapPin: (id) {
+                  for (final request in requests) {
+                    if (request.id == id) {
+                      onOpenRequest(request);
+                      return;
+                    }
+                  }
+                },
+              ),
             ),
             Positioned(
               left: 0,
@@ -114,6 +131,10 @@ class WorkerMapScreen extends StatelessWidget {
                       : _NearbyRequestCard(
                         request: nearbyRequest!,
                         onOpenRequest: onOpenRequest,
+                        distanceKm: nearbyRequest!.distanceKmFrom(
+                          originLatitude,
+                          originLongitude,
+                        ),
                       ),
             ),
           ],
@@ -160,10 +181,12 @@ class _NearbyRequestCard extends StatelessWidget {
   const _NearbyRequestCard({
     required this.request,
     required this.onOpenRequest,
+    required this.distanceKm,
   });
 
-  final SnowRequest request;
-  final ValueChanged<SnowRequest> onOpenRequest;
+  final RequestSummary request;
+  final ValueChanged<RequestSummary> onOpenRequest;
+  final double distanceKm;
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +217,7 @@ class _NearbyRequestCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     Text(
-                      '${request.distanceKm}km • 約${request.estimatedMinutes}分 • 新着',
+                      '${formatApproxDistance(distanceKm)} • 約${request.estimatedMinutes}分 • 新着',
                       style: const TextStyle(
                         color: YukitasColors.muted,
                         fontSize: 13,
@@ -220,7 +243,7 @@ class _NearbyRequestCard extends StatelessWidget {
             children: [
               _InfoChip(
                 icon: Icons.location_on_outlined,
-                label: '${request.distanceKm}km',
+                label: formatApproxDistance(distanceKm),
               ),
               _InfoChip(
                 icon: Icons.schedule_rounded,

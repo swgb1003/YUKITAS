@@ -16,6 +16,16 @@ String formatArea(double value) {
   return '$rounded m²';
 }
 
+/// Distance from a worker to a request, always hedged with 約.
+///
+/// It is measured to the request's published cell center rather than the
+/// address itself, so presenting it as an exact figure would be a lie - the
+/// real distance is within roughly a kilometre of this.
+String formatApproxDistance(double kilometres) {
+  if (kilometres < 1) return '約${(kilometres * 1000).round()}m';
+  return '約${kilometres.toStringAsFixed(1)}km';
+}
+
 String formatDate(DateTime value) => '${value.month}月${value.day}日';
 
 String formatDateTime(DateTime value) =>

@@ -24,7 +24,6 @@ SnowRequest _request({
     difficulty: 2,
     estimatedMinutes: 30,
     priceYen: 2500,
-    distanceKm: 0.5,
     isSos: false,
     sosReason: null,
     beforeImageAsset: 'assets/images/before_driveway.png',

@@ -18,7 +18,6 @@ SnowRequest _requestAt(RequestStatus status) {
     difficulty: 3,
     estimatedMinutes: 45,
     priceYen: 3200,
-    distanceKm: 0.8,
     isSos: false,
     sosReason: null,
     beforeImageAsset: 'assets/images/before_driveway.png',
@@ -115,7 +114,6 @@ void main() {
         difficulty: 3,
         estimatedMinutes: 45,
         priceYen: 3200,
-        distanceKm: 0.8,
         isSos: false,
         sosReason: null,
         beforeImageAsset: 'assets/images/before_driveway.png',
@@ -153,6 +151,24 @@ void main() {
       await tester.tap(find.byKey(const Key('mode-switch')).last);
       await tester.pumpAndSettle();
       expect(find.text('問題が報告されています'), findsOneWidget);
+
+      // Regression: dismissing a disputed job from the worker side ("次の
+      // 依頼を探す") must not let it reappear the next time the worker
+      // switches back into worker mode - it must be added to
+      // _finishedRequestIds the same way a rated completion is, not just
+      // have its id cleared locally.
+      await tester.tap(find.byKey(const Key('mode-switch')).last);
+      await tester.pumpAndSettle();
+      expect(find.text('問題が報告されています'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('find-next-request')));
+      await tester.tap(find.byKey(const Key('find-next-request')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('mode-switch')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('mode-switch')).last);
+      await tester.pumpAndSettle();
+      expect(find.text('問題が報告されています'), findsNothing);
     },
   );
 }

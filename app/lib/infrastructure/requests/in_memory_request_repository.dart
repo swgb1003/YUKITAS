@@ -23,7 +23,6 @@ class InMemoryRequestRepository extends ChangeNotifier
         difficulty: 3,
         estimatedMinutes: 45,
         priceYen: 3200,
-        distanceKm: 0.8,
         isSos: true,
         sosReason: '高齢の家族宅',
         beforeImageAsset: 'assets/images/before_driveway.png',
@@ -46,7 +45,6 @@ class InMemoryRequestRepository extends ChangeNotifier
       difficulty: 3,
       estimatedMinutes: 40,
       priceYen: 2800,
-      distanceKm: 0.8,
       isSos: true,
       sosReason: '高齢の家族宅を優先してほしい',
       beforeImageAsset: 'assets/images/before_driveway.png',
@@ -66,7 +64,6 @@ class InMemoryRequestRepository extends ChangeNotifier
       difficulty: 2,
       estimatedMinutes: 30,
       priceYen: 2200,
-      distanceKm: 1.2,
       isSos: false,
       sosReason: null,
       beforeImageAsset: 'assets/images/before_driveway.png',
@@ -86,7 +83,6 @@ class InMemoryRequestRepository extends ChangeNotifier
       difficulty: 4,
       estimatedMinutes: 55,
       priceYen: 3600,
-      distanceKm: 1.8,
       isSos: false,
       sosReason: null,
       beforeImageAsset: 'assets/images/before_driveway.png',
@@ -282,7 +278,8 @@ class InMemoryRequestRepository extends ChangeNotifier
     if (index == -1) return false;
 
     final request = _requests[index];
-    if (request.ownerId != ownerId || request.status != RequestStatus.waiting) {
+    if (request.ownerId != ownerId ||
+        !ownerCancellableStatuses.contains(request.status)) {
       return false;
     }
 
@@ -290,6 +287,32 @@ class InMemoryRequestRepository extends ChangeNotifier
       status: RequestStatus.cancelled,
       cancelReason: trimmedReason,
       cancelledAt: DateTime.now(),
+    );
+    notifyListeners();
+    return true;
+  }
+
+  @override
+  Future<bool> releaseAssignment({
+    required String requestId,
+    required String workerId,
+    required String reason,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 240));
+    final trimmedReason = reason.trim();
+    if (trimmedReason.isEmpty) return false;
+    final index = _requests.indexWhere((item) => item.id == requestId);
+    if (index == -1) return false;
+
+    final request = _requests[index];
+    if (request.workerId != workerId ||
+        !workerReleasableStatuses.contains(request.status)) {
+      return false;
+    }
+
+    _requests[index] = request.copyWith(
+      status: RequestStatus.waiting,
+      clearWorker: true,
     );
     notifyListeners();
     return true;

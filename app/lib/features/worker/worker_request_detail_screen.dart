@@ -7,19 +7,24 @@ import '../../core/formatters/yukitas_formatters.dart';
 import '../../core/theme/yukitas_colors.dart';
 import '../../core/widgets/frosted_card.dart';
 import '../../core/widgets/gradient_action_button.dart';
-import '../../core/widgets/request_photo_image.dart';
 import '../../core/widgets/screen_header.dart';
-import '../../domain/requests/snow_request.dart';
+import '../../domain/requests/request_summary.dart';
 
 class WorkerRequestDetailScreen extends StatefulWidget {
   const WorkerRequestDetailScreen({
     required this.request,
     required this.onAccept,
+    required this.originLatitude,
+    required this.originLongitude,
     super.key,
   });
 
-  final SnowRequest request;
+  final RequestSummary request;
   final Future<bool> Function() onAccept;
+
+  /// The worker's own position, which is where distance is measured from.
+  final double originLatitude;
+  final double originLongitude;
 
   @override
   State<WorkerRequestDetailScreen> createState() =>
@@ -221,47 +226,9 @@ class _WorkerRequestDetailScreenState extends State<WorkerRequestDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(26),
-                  child: AspectRatio(
-                    aspectRatio: 1.35,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        RequestPhotoImage(
-                          source: request.beforeImageAsset,
-                          fit: BoxFit.cover,
-                        ),
-                        Positioned(
-                          left: 14,
-                          top: 14,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xEFFFFFFF),
-                              borderRadius: BorderRadius.circular(99),
-                            ),
-                            child: const Text(
-                              'BEFORE',
-                              style: TextStyle(
-                                color: YukitasColors.deep,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Transform.translate(
-                  offset: const Offset(0, -28),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: FrostedCard(
+                const _PendingDetailsPanel(),
+                const SizedBox(height: 14),
+                FrostedCard(
                       padding: const EdgeInsets.all(18),
                       radius: 25,
                       child: Column(
@@ -304,7 +271,7 @@ class _WorkerRequestDetailScreenState extends State<WorkerRequestDetailScreen> {
                                           ).textTheme.titleLarge,
                                     ),
                                     Text(
-                                      '${request.approximateAddress} • ${request.distanceKm}km',
+                                      '${formatApproxDistance(request.distanceKmFrom(widget.originLatitude, widget.originLongitude))} • 受注すると住所を表示',
                                       style: const TextStyle(
                                         color: YukitasColors.muted,
                                         fontSize: 12,
@@ -327,8 +294,6 @@ class _WorkerRequestDetailScreenState extends State<WorkerRequestDetailScreen> {
                         ],
                       ),
                     ),
-                  ),
-                ),
                 Text('作業の目安', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 10),
                 Row(
@@ -422,6 +387,58 @@ class _ConfirmRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Stands where the before photo used to, above the job summary.
+///
+/// A worker deciding whether to take a job gets the AI's structured read of
+/// the site (depth, area, difficulty, time) further down the screen. The
+/// photo and the street address arrive on acceptance, because until then
+/// this screen is readable by every signed-in user (AC-08). Saying so
+/// plainly is better than a blank space - the worker knows what they get and
+/// when.
+class _PendingDetailsPanel extends StatelessWidget {
+  const _PendingDetailsPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+      decoration: BoxDecoration(
+        color: YukitasColors.ice,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: YukitasColors.sky),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.lock_outline_rounded,
+            color: YukitasColors.deep,
+            size: 30,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '現地写真と住所は受注後に表示',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'ご依頼者のプライバシー保護のため、受注が確定するまでは\n'
+            'おおよその距離のみをお伝えしています。',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: YukitasColors.muted,
+              fontSize: 12,
+              height: 1.6,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

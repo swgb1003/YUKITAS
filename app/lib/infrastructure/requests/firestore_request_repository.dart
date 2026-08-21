@@ -13,11 +13,13 @@ class FirestoreRequestRepository extends ChangeNotifier
     required this.userId,
     FirebaseFirestore? firestore,
   }) : _firestore = firestore ?? FirebaseFirestore.instance {
+    // Only this user's own requests, in either role. Open requests belonging
+    // to other people are deliberately absent: they are readable through
+    // `requestBoard` (FirestoreRequestBoardRepository), which carries a
+    // coarse location and no address or photos. A query for every waiting
+    // request would now be rejected by the rules, which is the point - it is
+    // what used to hand every signed-in user the full document (AC-08).
     _subscriptions = <StreamSubscription<QuerySnapshot<Map<String, dynamic>>>>[
-      _listenTo(
-        'waiting',
-        _collection.where('status', isEqualTo: RequestStatus.waiting.name),
-      ),
       _listenTo('owned', _collection.where('ownerId', isEqualTo: userId)),
       _listenTo('assigned', _collection.where('workerId', isEqualTo: userId)),
     ];
@@ -73,9 +75,14 @@ class FirestoreRequestRepository extends ChangeNotifier
     required String workerName,
   }) async {
     if (workerId != userId || workerName.trim().isEmpty) return false;
-    return _runRequestTransaction(requestId, (transaction, reference, request) {
-      if (!request.isAvailable || request.ownerId == userId) return false;
-      transaction.update(reference, <String, Object?>{
+    // A blind update, not a transaction: a worker cannot read a request they
+    // have not taken yet, so there is nothing to read first. The atomicity
+    // that used to come from the transaction now comes from the rules, which
+    // evaluate `status == 'waiting' && workerId == null` server-side against
+    // the current document - so two workers racing still leaves exactly one
+    // winner, and the loser gets permission-denied.
+    try {
+      await _collection.doc(requestId).update(<String, Object?>{
         'status': RequestStatus.matched.name,
         'workerId': userId,
         'workerName': workerName.trim(),
@@ -83,7 +90,12 @@ class FirestoreRequestRepository extends ChangeNotifier
         'updatedAt': FieldValue.serverTimestamp(),
       });
       return true;
-    });
+    } on FirebaseException catch (error) {
+      // permission-denied here means "someone else got there first", which
+      // is a normal outcome rather than a fault.
+      debugPrint('Accept rejected for $requestId: ${error.code}');
+      return false;
+    }
   }
 
   @override
@@ -218,13 +230,39 @@ class FirestoreRequestRepository extends ChangeNotifier
     final trimmedReason = reason.trim();
     if (trimmedReason.isEmpty) return false;
     return _runRequestTransaction(requestId, (transaction, reference, request) {
-      if (request.ownerId != userId || request.status != RequestStatus.waiting) {
+      if (request.ownerId != userId ||
+          !ownerCancellableStatuses.contains(request.status)) {
         return false;
       }
       transaction.update(reference, <String, Object?>{
         'status': RequestStatus.cancelled.name,
         'cancelReason': trimmedReason,
         'cancelledAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    });
+  }
+
+  @override
+  Future<bool> releaseAssignment({
+    required String requestId,
+    required String workerId,
+    required String reason,
+  }) async {
+    if (workerId != userId) return false;
+    if (reason.trim().isEmpty) return false;
+    return _runRequestTransaction(requestId, (transaction, reference, request) {
+      if (request.workerId != userId ||
+          !workerReleasableStatuses.contains(request.status)) {
+        return false;
+      }
+      transaction.update(reference, <String, Object?>{
+        'status': RequestStatus.waiting.name,
+        'workerId': null,
+        'workerName': null,
+        'acceptedAt': null,
+        'movingAt': null,
         'updatedAt': FieldValue.serverTimestamp(),
       });
       return true;

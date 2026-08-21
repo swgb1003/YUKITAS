@@ -92,6 +92,12 @@ RequestStatusTone statusTone(RequestStatus status) => switch (status) {
     background: Color(0xFFF1F6F9),
     border: YukitasColors.outline,
   ),
+  RequestStatus.expired => const RequestStatusTone(
+    label: '期限切れ',
+    foreground: YukitasColors.muted,
+    background: Color(0xFFF1F6F9),
+    border: YukitasColors.outline,
+  ),
   RequestStatus.disputed => const RequestStatusTone(
     label: '要確認',
     foreground: YukitasColors.sos,

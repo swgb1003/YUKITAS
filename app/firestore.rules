@@ -28,7 +28,6 @@ service cloud.firestore {
         'difficulty',
         'estimatedMinutes',
         'priceYen',
-        'distanceKm',
         'isSos',
         'sosReason',
         'beforeImageAsset',
@@ -53,6 +52,8 @@ service cloud.firestore {
         'disputedBy',
         'cancelReason',
         'cancelledAt',
+        'resolutionNote',
+        'resolvedAt',
         'updatedAt'
       ];
       return data.keys().hasAll(required)
@@ -84,8 +85,6 @@ service cloud.firestore {
         && data.priceYen is int
         && data.priceYen >= 0
         && data.priceYen <= 1000000
-        && data.distanceKm is number
-        && data.distanceKm >= 0
         && data.isSos is bool
         && (data.sosReason == null || data.sosReason is string)
         && data.beforeImageAsset is string
@@ -117,6 +116,8 @@ service cloud.firestore {
         && data.disputedBy == null
         && data.cancelReason == null
         && data.cancelledAt == null
+        && data.resolutionNote == null
+        && data.resolvedAt == null
         && data.updatedAt == request.time;
     }
 
@@ -225,9 +226,12 @@ service cloud.firestore {
         && usesServerTime('updatedAt');
     }
 
-    function ownerCancelsWhileWaiting() {
+    // Stops at 'arrived': once the worker has started clearing snow there is
+    // labour to account for, so the way out is a dispute with a resolution,
+    // not a unilateral cancel.
+    function ownerCancels() {
       return resource.data.ownerId == request.auth.uid
-        && resource.data.status == 'waiting'
+        && resource.data.status in ['waiting', 'matched', 'moving', 'arrived']
         && request.resource.data.status == 'cancelled'
         && request.resource.data.cancelReason is string
         && request.resource.data.cancelReason.size() > 0
@@ -237,10 +241,37 @@ service cloud.firestore {
         && usesServerTime('updatedAt');
     }
 
+    // An assigned worker handing the job back before any snow has been
+    // moved. Returns it to the pool rather than stranding the requester,
+    // and is deliberately separate from reporting a problem - a worker who
+    // simply cannot make it should not have to file a dispute.
+    function assignedWorkerReleases() {
+      return resource.data.workerId == request.auth.uid
+        && resource.data.status in ['matched', 'moving']
+        && request.resource.data.status == 'waiting'
+        && request.resource.data.workerId == null
+        && request.resource.data.workerName == null
+        && request.resource.data.acceptedAt == null
+        && request.resource.data.movingAt == null
+        && changedOnly(
+          ['status', 'workerId', 'workerName', 'acceptedAt', 'movingAt', 'updatedAt']
+        )
+        && usesServerTime('updatedAt');
+    }
+
     match /requests/{requestId} {
+      // Parties only. A request used to be readable by anyone while it was
+      // 'waiting', and because rules grant a whole document, that handed
+      // every signed-in user the exact GeoPoint, the address and the photo
+      // paths of a stranger's home - the opposite of AC-08. Open requests
+      // now reach workers through /requestBoard, which carries a coarse
+      // cell center and no address, photos or SOS reason.
+      //
+      // Note this does not block accepting: workerAccepts() below is a blind
+      // update whose guard the rules engine evaluates server-side, so a
+      // worker never needs read access to take a job.
       allow read: if signedIn() && (
-        resource.data.status == 'waiting'
-        || resource.data.ownerId == request.auth.uid
+        resource.data.ownerId == request.auth.uid
         || resource.data.workerId == request.auth.uid
       );
       allow create: if signedIn() && validNewRequest(requestId);
@@ -253,7 +284,8 @@ service cloud.firestore {
         || ownerApproves()
         || ownerRates()
         || partyReportsProblem()
-        || ownerCancelsWhileWaiting()
+        || ownerCancels()
+        || assignedWorkerReleases()
       );
       allow delete: if false;
     }
@@ -307,6 +339,16 @@ service cloud.firestore {
     // Aggregate counts only, no per-request detail, so any signed-in user
     // may read them; nothing but the Admin SDK may write.
     match /regionStats/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // The public projection of open and in-progress requests, written only
+    // by the syncRequestBoard Cloud Function via the Admin SDK. Readable by
+    // any signed-in user precisely because it holds nothing that identifies
+    // a household: a geohash cell center instead of a coordinate, no
+    // address, no photos, and no SOS reason.
+    match /requestBoard/{requestId} {
       allow read: if signedIn();
       allow write: if false;
     }

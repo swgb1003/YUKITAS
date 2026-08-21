@@ -212,7 +212,9 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                         destination: LatLng(request.latitude, request.longitude),
                         requesterView: true,
                       )
-                      : SnowMap(requests: [request]),
+                      // The requester's own request, so its real location is
+                      // theirs to see.
+                      : SnowMap(pins: [MapPin.fromRequest(request)]),
             ),
             Positioned(
               left: 0,
@@ -389,7 +391,14 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                         borderRadius: BorderRadius.circular(19),
                       ),
                     ),
-                    child: const Text('問題を報告'),
+                    child: const FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '問題を報告',
+                        maxLines: 1,
+                        softWrap: false,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),

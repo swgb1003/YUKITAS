@@ -18,11 +18,16 @@ service firebase.storage {
       );
     }
 
+    // Parties only. Photos used to be readable by any signed-in user while
+    // the request was 'waiting' - a picture of a stranger's entrance, next
+    // to that request's exact coordinates. Acceptance criterion AC-08 is
+    // explicit that an unassigned user reaches neither ("未受注ユーザーは
+    // 正確な住所・画像へアクセスできない"), so the board carries the AI's
+    // structured read of the photo instead of the photo itself.
     function canReadRequestMedia(requestId) {
       let requestData = requestDocument(requestId).data;
       return signedIn() && (
-        requestData.status == 'waiting'
-        || requestData.ownerId == request.auth.uid
+        requestData.ownerId == request.auth.uid
         || requestData.workerId == request.auth.uid
       );
     }

@@ -5,10 +5,14 @@ import '../../core/theme/yukitas_colors.dart';
 import '../../core/widgets/frosted_card.dart';
 import '../../core/widgets/mode_switch_button.dart';
 import '../../core/widgets/snow_map.dart';
+import '../../domain/requests/request_summary.dart';
 import '../../domain/requests/snow_request.dart';
 
 /// Real-map version of R-01/06章の地域雪マップ: shows nearby requests
 /// color-coded by status, with a legend explaining what each color means.
+///
+/// Draws from the public board, so every pin sits at a cell center rather
+/// than a front door (spec 06.1 "個人宅の正確な位置は受注前に公開せず").
 class RequesterSnowMapScreen extends StatelessWidget {
   const RequesterSnowMapScreen({
     required this.requests,
@@ -16,7 +20,7 @@ class RequesterSnowMapScreen extends StatelessWidget {
     super.key,
   });
 
-  final List<SnowRequest> requests;
+  final List<RequestSummary> requests;
   final VoidCallback onToggleMode;
 
   bool _isActive(RequestStatus status) =>
@@ -39,7 +43,11 @@ class RequesterSnowMapScreen extends StatelessWidget {
         bottom: false,
         child: Stack(
           children: [
-            Positioned.fill(child: SnowMap(requests: requests)),
+            Positioned.fill(
+              child: SnowMap(
+                pins: requests.map(MapPin.fromSummary).toList(),
+              ),
+            ),
             Positioned(
               left: 0,
               right: 0,

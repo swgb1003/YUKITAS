@@ -55,15 +55,25 @@ class FirebasePushNotificationService extends ChangeNotifier
     }
   }
 
+  /// Cells this device is currently subscribed to, so switching areas can
+  /// drop the topics that no longer apply.
+  Set<String> _subscribedCells = <String>{};
+
   @override
-  Future<void> setWorkerSubscribed(bool subscribed) async {
+  Future<void> setWorkerSubscribed(
+    bool subscribed, {
+    List<String> cells = const <String>[],
+  }) async {
+    final wanted = subscribed ? cells.toSet() : <String>{};
     try {
       final messaging = FirebaseMessaging.instance;
-      if (subscribed) {
-        await messaging.subscribeToTopic('workers');
-      } else {
-        await messaging.unsubscribeFromTopic('workers');
+      for (final cell in _subscribedCells.difference(wanted)) {
+        await messaging.unsubscribeFromTopic('cell_$cell');
       }
+      for (final cell in wanted.difference(_subscribedCells)) {
+        await messaging.subscribeToTopic('cell_$cell');
+      }
+      _subscribedCells = wanted;
     } catch (_) {
       // Best-effort, same as initialize().
     }

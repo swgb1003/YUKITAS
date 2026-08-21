@@ -45,12 +45,25 @@ abstract interface class RequestRepository implements Listenable {
     required String reason,
   });
 
-  /// Cancels a still-unmatched request (spec 09章: "waiting → cancelled
-  /// 依頼者 未受注。キャンセル理由を記録。"). Only the owner may cancel, and
-  /// only while the request is still [RequestStatus.waiting].
+  /// Cancels a request with a recorded reason (spec 09章). Only the owner
+  /// may cancel, and only from [ownerCancellableStatuses] - which now
+  /// includes the post-match states, so a requester whose worker never
+  /// arrives is no longer stuck with no way out.
   Future<bool> cancel({
     required String requestId,
     required String ownerId,
+    required String reason,
+  });
+
+  /// Hands an accepted job back to the pool, returning it to
+  /// [RequestStatus.waiting] and clearing the assignment.
+  ///
+  /// Allowed from [workerReleasableStatuses] only - before any snow has been
+  /// moved. This is the non-accusatory exit a worker needs when they cannot
+  /// make it; reporting a problem is for when something is actually wrong.
+  Future<bool> releaseAssignment({
+    required String requestId,
+    required String workerId,
     required String reason,
   });
 }

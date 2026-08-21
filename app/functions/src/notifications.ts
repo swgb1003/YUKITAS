@@ -3,10 +3,13 @@ import { getMessaging } from "firebase-admin/messaging";
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
 
+import { BOARD_CELL_PRECISION, encodeGeohash } from "./geo";
+
 const REGION = "asia-northeast1";
 
 interface RequestDoc {
   ownerId: string;
+  location: FirebaseFirestore.GeoPoint;
   placeName: string;
   workerId: string | null;
   workerName: string | null;
@@ -39,16 +42,31 @@ export const notifyOnRequestChange = onDocumentUpdated(
   },
 );
 
-/** Pushes every worker (via the 'workers' topic) when a new request opens up. */
+/**
+ * Pushes workers in the request's own area when a new request opens up.
+ *
+ * Scoped to one geohash cell rather than a single global 'workers' topic,
+ * which pushed every request in the country to every worker in it. The body
+ * deliberately omits `placeName`: this reaches workers who have not accepted
+ * anything, and the place name is often the household's own words for where
+ * they live.
+ */
 export const notifyWorkersOnNewRequest = onDocumentCreated(
   { document: "requests/{requestId}", region: REGION },
   async (event) => {
     const data = event.data?.data() as RequestDoc | undefined;
-    if (!data || data.status !== "waiting") return;
+    if (!data || data.status !== "waiting" || !data.location) return;
+
+    const cell = encodeGeohash(
+      data.location.latitude,
+      data.location.longitude,
+    ).slice(0, BOARD_CELL_PRECISION);
 
     const title = data.isSos ? "🚨 緊急SOS依頼が届きました" : "新しい除雪依頼があります";
-    const body = `${data.placeName} - 対応できる方はアプリからご確認ください`;
-    await sendToTopic("workers", title, body, { requestId: event.params.requestId });
+    const body = "お近くで対応できる方はアプリからご確認ください";
+    await sendToTopic(`cell_${cell}`, title, body, {
+      requestId: event.params.requestId,
+    });
   },
 );
 
@@ -70,6 +88,26 @@ function buildChangeNotifications(
       });
     }
 
+    if (after.status === "expired") {
+      notifications.push({
+        userId: after.ownerId,
+        title: "依頼の募集期限が切れました",
+        body: "対応できるワーカーが見つかりませんでした。時間帯を変えて再度ご依頼ください",
+      });
+    }
+
+    if (
+      before.status !== "waiting" &&
+      after.status === "waiting" &&
+      before.workerId
+    ) {
+      notifications.push({
+        userId: after.ownerId,
+        title: "担当ワーカーが対応できなくなりました",
+        body: "他のワーカーを再度お探ししています",
+      });
+    }
+
     if (after.status === "disputed") {
       const otherPartyId =
         after.disputedBy === after.ownerId ? after.workerId : after.ownerId;
@@ -80,6 +118,26 @@ function buildChangeNotifications(
           body: `${after.placeName}の依頼で問題が報告されました。内容を確認してください`,
         });
       }
+    }
+  }
+
+  // A settled dispute concerns both sides, so both are told.
+  if (before.status === "disputed" && after.status !== "disputed") {
+    const settled =
+      after.status === "completed"
+        ? "作業完了として処理されました"
+        : "キャンセル・返金として処理されました";
+    notifications.push({
+      userId: after.ownerId,
+      title: "報告された問題が解決しました",
+      body: `${after.placeName}の依頼は${settled}`,
+    });
+    if (after.workerId) {
+      notifications.push({
+        userId: after.workerId,
+        title: "報告された問題が解決しました",
+        body: `担当された依頼は${settled}`,
+      });
     }
   }
 

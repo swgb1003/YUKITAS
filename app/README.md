@@ -32,6 +32,46 @@ flutter run
 For an offline/demo build, pass `--dart-define=YUKITAS_STORAGE_ENABLED=false`
 to keep using the bundled photos instead of Firebase Storage.
 
+### Open requests and the public board
+
+A request lives in two places. `requests/{id}` holds everything — the exact
+coordinate, the address, the photo paths — and Firestore rules restrict it to
+the request's owner and its assigned worker. `requestBoard/{id}` is the
+public projection every signed-in user may read, written only by the
+`syncRequestBoard` Cloud Function.
+
+The split exists because Firestore rules grant or deny a *whole document*:
+a request that every worker can read is a request whose address and photos
+every worker can read. The board therefore carries a geohash cell center
+(roughly a kilometre of blur) instead of a coordinate, and no address, no
+photos and no SOS reason — satisfying acceptance criterion AC-08,
+"未受注ユーザーは正確な住所・画像へアクセスできない".
+
+Two consequences worth knowing:
+
+- **Distance is computed, not stored.** It is measured from the worker's own
+  position to the published cell center, so it is always shown as 約N km.
+  There is deliberately no `distanceKm` field on a request.
+- **Accepting does not require reading.** `accept()` is a blind `update()`;
+  the `workerAccepts()` rule evaluates `status == 'waiting' && workerId ==
+  null` server-side, so two workers racing still leaves exactly one winner.
+
+### Request lifecycle
+
+Beyond the main flow, a request can leave `waiting` or an assignment without
+being completed:
+
+| Transition | Who | When |
+| --- | --- | --- |
+| → `cancelled` | 依頼者 | Any time up to `arrived`, with a reason |
+| → `waiting` | 担当ワーカー | From `matched`/`moving` — hands the job back |
+| → `expired` | サーバー | `waiting` for over 6 hours (`expireStaleRequests`) |
+| `disputed` → `completed`/`cancelled` | 運営のみ | Via the `resolveDispute` callable |
+
+`resolveDispute` requires an `admin: true` custom claim and is the only way
+out of `disputed`; no client rule permits that transition, so a payment can
+never be left frozen with nobody able to settle it.
+
 ### Snowfall forecast
 
 The home screen's forecast card and the family heavy-snow push notification

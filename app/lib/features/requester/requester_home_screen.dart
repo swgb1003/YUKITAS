@@ -7,7 +7,7 @@ import '../../core/widgets/frosted_card.dart';
 import '../../core/widgets/gradient_action_button.dart';
 import '../../core/widgets/mode_switch_button.dart';
 import '../../core/widgets/snow_map.dart';
-import '../../domain/requests/snow_request.dart';
+import '../../domain/requests/request_summary.dart';
 import '../../domain/stats/region_stats.dart';
 import '../../domain/weather/snowfall_forecast.dart';
 
@@ -24,7 +24,7 @@ class RequesterHomeScreen extends StatelessWidget {
 
   final VoidCallback onToggleMode;
   final VoidCallback onCreateRequest;
-  final List<SnowRequest> requests;
+  final List<RequestSummary> requests;
   final VoidCallback onOpenSnowMap;
   final RegionStats stats;
   final SnowfallForecast forecast;
@@ -87,7 +87,7 @@ class RequesterHomeScreen extends StatelessWidget {
                         onTap: onOpenSnowMap,
                         child: SnowMap(
                           compact: true,
-                          requests: requests,
+                          pins: requests.map(MapPin.fromSummary).toList(),
                           interactive: false,
                         ),
                       ),

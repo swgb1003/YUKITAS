@@ -259,6 +259,7 @@ class _WorkerActiveRequestScreenState extends State<WorkerActiveRequestScreen> {
             ),
             const SizedBox(height: 22),
             GradientActionButton(
+              key: const Key('find-next-request'),
               label: '次の依頼を探す',
               icon: Icons.search_rounded,
               workerStyle: true,
@@ -312,7 +313,7 @@ class _WorkerActiveRequestScreenState extends State<WorkerActiveRequestScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              '${widget.request.approximateAddress} • ${widget.request.distanceKm}km',
+              widget.request.approximateAddress,
               style: const TextStyle(
                 color: YukitasColors.muted,
                 fontWeight: FontWeight.w600,

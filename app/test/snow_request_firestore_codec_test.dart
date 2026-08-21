@@ -21,7 +21,6 @@ void main() {
       difficulty: 3,
       estimatedMinutes: 45,
       priceYen: 3200,
-      distanceKm: 0.8,
       isSos: true,
       sosReason: '高齢の家族宅',
       beforeImageAsset: 'assets/images/before_driveway.png',

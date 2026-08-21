@@ -9,6 +9,7 @@ enum RequestStatus {
   completed,
   cancelled,
   disputed,
+  expired,
 }
 
 extension RequestStatusPresentation on RequestStatus {
@@ -23,6 +24,7 @@ extension RequestStatusPresentation on RequestStatus {
     RequestStatus.completed => '除雪完了',
     RequestStatus.cancelled => 'キャンセル済み',
     RequestStatus.disputed => '問題が報告されています',
+    RequestStatus.expired => '募集期限切れ',
   };
 
   String get workerLabel => switch (this) {
@@ -36,6 +38,7 @@ extension RequestStatusPresentation on RequestStatus {
     RequestStatus.completed => 'お疲れさまでした',
     RequestStatus.cancelled => 'キャンセル済み',
     RequestStatus.disputed => '問題の報告を受け、一時停止しています',
+    RequestStatus.expired => '募集期限切れ',
   };
 }
 
@@ -47,6 +50,34 @@ const disputableRequestStatuses = {
   RequestStatus.arrived,
   RequestStatus.working,
   RequestStatus.reviewing,
+};
+
+/// Statuses the owner may still cancel from (spec 09章 "matched以降 →
+/// cancelled 当事者 理由必須"). Stops at [RequestStatus.arrived]: once the
+/// worker has started clearing snow there is labour to account for, so the
+/// way out is a dispute with a resolution, not a unilateral cancel.
+const ownerCancellableStatuses = {
+  RequestStatus.waiting,
+  RequestStatus.matched,
+  RequestStatus.moving,
+  RequestStatus.arrived,
+};
+
+/// Statuses an assigned worker may hand the job back from, returning it to
+/// the pool. A worker who cannot make it needs an exit that is not an
+/// accusation - without one the only way out was a dispute, which stalls the
+/// requester's job and unfairly marks the worker.
+const workerReleasableStatuses = {
+  RequestStatus.matched,
+  RequestStatus.moving,
+};
+
+/// Statuses from which nothing further happens on its own. Used to decide
+/// what still counts as live work.
+const terminalRequestStatuses = {
+  RequestStatus.completed,
+  RequestStatus.cancelled,
+  RequestStatus.expired,
 };
 
 class SnowRequest {
@@ -63,7 +94,6 @@ class SnowRequest {
     required this.difficulty,
     required this.estimatedMinutes,
     required this.priceYen,
-    required this.distanceKm,
     required this.isSos,
     required this.sosReason,
     required this.beforeImageAsset,
@@ -88,6 +118,8 @@ class SnowRequest {
     this.disputedBy,
     this.cancelReason,
     this.cancelledAt,
+    this.resolutionNote,
+    this.resolvedAt,
   });
 
   final String id;
@@ -102,9 +134,12 @@ class SnowRequest {
   final int difficulty;
   final int estimatedMinutes;
   final int priceYen;
-  final double distanceKm;
   final bool isSos;
   final String? sosReason;
+  // Note: there is deliberately no distanceKm here. Distance is a relation
+  // between a worker and a request, not a property of the request - storing
+  // it on the document showed every worker the same fixed number wherever
+  // they stood. See RequestSummary.distanceKmFrom.
   final String beforeImageAsset;
   final RequestStatus status;
   final DateTime createdAt;
@@ -135,6 +170,13 @@ class SnowRequest {
   final String? cancelReason;
   final DateTime? cancelledAt;
 
+  /// How a dispute was settled, written only by the server-side resolution
+  /// path (see functions/src/disputes.ts). A dispute that cannot be settled
+  /// leaves the payment frozen and both parties stuck, so the resolution is
+  /// what makes [RequestStatus.disputed] a stop rather than a dead end.
+  final String? resolutionNote;
+  final DateTime? resolvedAt;
+
   bool get isAvailable => status == RequestStatus.waiting && workerId == null;
 
   String get workTitle => '${workAreas.join('・')}の除雪';
@@ -162,6 +204,9 @@ class SnowRequest {
     String? disputedBy,
     String? cancelReason,
     DateTime? cancelledAt,
+    String? resolutionNote,
+    DateTime? resolvedAt,
+    bool clearWorker = false,
   }) {
     return SnowRequest(
       id: id ?? this.id,
@@ -176,16 +221,15 @@ class SnowRequest {
       difficulty: difficulty,
       estimatedMinutes: estimatedMinutes,
       priceYen: priceYen,
-      distanceKm: distanceKm,
       isSos: isSos,
       sosReason: sosReason,
       beforeImageAsset: beforeImageAsset,
       status: status ?? this.status,
       createdAt: createdAt,
-      workerId: workerId ?? this.workerId,
-      workerName: workerName ?? this.workerName,
-      acceptedAt: acceptedAt ?? this.acceptedAt,
-      movingAt: movingAt ?? this.movingAt,
+      workerId: clearWorker ? null : (workerId ?? this.workerId),
+      workerName: clearWorker ? null : (workerName ?? this.workerName),
+      acceptedAt: clearWorker ? null : (acceptedAt ?? this.acceptedAt),
+      movingAt: clearWorker ? null : (movingAt ?? this.movingAt),
       arrivedAt: arrivedAt ?? this.arrivedAt,
       safetyConfirmedAt: safetyConfirmedAt ?? this.safetyConfirmedAt,
       startedAt: startedAt ?? this.startedAt,
@@ -201,8 +245,13 @@ class SnowRequest {
       disputedBy: disputedBy ?? this.disputedBy,
       cancelReason: cancelReason ?? this.cancelReason,
       cancelledAt: cancelledAt ?? this.cancelledAt,
+      resolutionNote: resolutionNote ?? this.resolutionNote,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
     );
   }
 }
 
-enum DemoPaymentStatus { authorized, paid }
+/// [refunded] exists so a dispute can actually be settled in the requester's
+/// favour. Without it the only outcomes were "still authorized" (frozen) and
+/// "paid", which is why a disputed job could never be closed out.
+enum DemoPaymentStatus { authorized, paid, refunded }

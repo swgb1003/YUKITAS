@@ -250,7 +250,6 @@ class _RequestCreationFlowState extends State<RequestCreationFlow> {
       difficulty: analysis.difficulty,
       estimatedMinutes: analysis.estimatedMinutes,
       priceYen: estimate.totalYen,
-      distanceKm: 0.8,
       isSos: _isSos,
       sosReason: _isSos ? '高齢の家族宅を優先してほしい' : null,
       beforeImageAsset: _uploadedBeforeImagePath ?? _imageAsset,

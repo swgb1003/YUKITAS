@@ -5,20 +5,25 @@ import '../../core/formatters/yukitas_formatters.dart';
 import '../../core/theme/yukitas_colors.dart';
 import '../../core/widgets/frosted_card.dart';
 import '../../core/widgets/mode_switch_button.dart';
-import '../../core/widgets/request_photo_image.dart';
-import '../../domain/requests/snow_request.dart';
+import '../../domain/requests/request_summary.dart';
 
 class WorkerListScreen extends StatelessWidget {
   const WorkerListScreen({
     required this.onToggleMode,
     required this.requests,
     required this.onOpenRequest,
+    required this.originLatitude,
+    required this.originLongitude,
     super.key,
   });
 
   final VoidCallback onToggleMode;
-  final List<SnowRequest> requests;
-  final ValueChanged<SnowRequest> onOpenRequest;
+  final List<RequestSummary> requests;
+  final ValueChanged<RequestSummary> onOpenRequest;
+
+  /// The worker's own position, which is where distance is measured from.
+  final double originLatitude;
+  final double originLongitude;
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +113,10 @@ class WorkerListScreen extends StatelessWidget {
                     key: Key('worker-request-${requests[index].id}'),
                     request: requests[index],
                     onTap: () => onOpenRequest(requests[index]),
+                    distanceKm: requests[index].distanceKmFrom(
+                      originLatitude,
+                      originLongitude,
+                    ),
                   ),
                   if (index != requests.length - 1) const SizedBox(height: 14),
                 ],
@@ -211,11 +220,83 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _RequestCard extends StatelessWidget {
-  const _RequestCard({required this.request, required this.onTap, super.key});
+/// Stands where the before photo used to, on the open-requests list.
+///
+/// The photo is not on the public board: a picture of someone's entrance is
+/// exactly what AC-08 keeps away from workers who have not taken the job.
+/// The AI's structured read of that photo goes out instead - snow depth is
+/// the single most useful number for judging effort, and unlike the image it
+/// says nothing about who lives there.
+class _JobScaleTile extends StatelessWidget {
+  const _JobScaleTile({required this.request});
 
-  final SnowRequest request;
+  final RequestSummary request;
+
+  @override
+  Widget build(BuildContext context) {
+    final sos = request.isSos;
+    return Container(
+      width: 102,
+      height: 106,
+      decoration: BoxDecoration(
+        color: sos ? const Color(0xFFFFF0F4) : YukitasColors.ice,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: sos ? const Color(0xFFFFC6D2) : YukitasColors.sky,
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            '積雪',
+            style: TextStyle(
+              color: YukitasColors.muted,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                color: YukitasColors.deep,
+                fontWeight: FontWeight.w900,
+              ),
+              children: [
+                TextSpan(
+                  text: '${request.snowDepthCm}',
+                  style: const TextStyle(fontSize: 30),
+                ),
+                const TextSpan(text: 'cm', style: TextStyle(fontSize: 13)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '約${request.estimatedMinutes}分',
+            style: const TextStyle(
+              color: YukitasColors.muted,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RequestCard extends StatelessWidget {
+  const _RequestCard({
+    required this.request,
+    required this.onTap,
+    required this.distanceKm,
+    super.key,
+  });
+
+  final RequestSummary request;
   final VoidCallback onTap;
+  final double distanceKm;
 
   @override
   Widget build(BuildContext context) {
@@ -231,15 +312,7 @@ class _RequestCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: RequestPhotoImage(
-                source: request.beforeImageAsset,
-                width: 102,
-                height: 106,
-                fit: BoxFit.cover,
-              ),
-            ),
+            _JobScaleTile(request: request),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -300,7 +373,7 @@ class _RequestCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        '${request.distanceKm}km',
+                        formatApproxDistance(distanceKm),
                         style: const TextStyle(
                           color: YukitasColors.muted,
                           fontWeight: FontWeight.w600,
@@ -324,7 +397,7 @@ class _RequestCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 7),
                   Text(
-                    '積雪 約${request.snowDepthCm}cm • 難易度 ${request.difficulty}',
+                    '作業範囲 ${formatArea(request.areaSqm)} • 難易度 ${request.difficulty}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

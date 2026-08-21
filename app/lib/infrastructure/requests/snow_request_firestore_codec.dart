@@ -20,7 +20,6 @@ class SnowRequestFirestoreCodec {
       'difficulty': request.difficulty,
       'estimatedMinutes': request.estimatedMinutes,
       'priceYen': request.priceYen,
-      'distanceKm': request.distanceKm,
       'isSos': request.isSos,
       'sosReason': request.sosReason,
       'beforeImageAsset': request.beforeImageAsset,
@@ -45,6 +44,8 @@ class SnowRequestFirestoreCodec {
       'disputedBy': request.disputedBy,
       'cancelReason': request.cancelReason,
       'cancelledAt': _encodeDate(request.cancelledAt),
+      'resolutionNote': request.resolutionNote,
+      'resolvedAt': _encodeDate(request.resolvedAt),
       'updatedAt': updatedAt ?? Timestamp.now(),
     };
   }
@@ -65,7 +66,6 @@ class SnowRequestFirestoreCodec {
       difficulty: _requiredNumber(data, 'difficulty').toInt(),
       estimatedMinutes: _requiredNumber(data, 'estimatedMinutes').toInt(),
       priceYen: _requiredNumber(data, 'priceYen').toInt(),
-      distanceKm: _requiredNumber(data, 'distanceKm').toDouble(),
       isSos: data['isSos'] as bool? ?? false,
       sosReason: data['sosReason'] as String?,
       beforeImageAsset: _requiredString(data, 'beforeImageAsset'),
@@ -90,6 +90,8 @@ class SnowRequestFirestoreCodec {
       disputedBy: data['disputedBy'] as String?,
       cancelReason: data['cancelReason'] as String?,
       cancelledAt: _decodeDate(data['cancelledAt']),
+      resolutionNote: data['resolutionNote'] as String?,
+      resolvedAt: _decodeDate(data['resolvedAt']),
     );
   }
 

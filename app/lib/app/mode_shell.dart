@@ -7,10 +7,15 @@ import '../application/media/request_photo_service.dart';
 import '../application/notifications/push_notification_service.dart';
 import '../application/requests/snow_analysis_provider.dart';
 import '../application/requests/worker_achievements.dart';
+import '../core/geo/geo_cell.dart';
+import '../core/location/current_location.dart';
 import '../core/widgets/push_notification_scope.dart';
+import '../core/widgets/snow_map.dart';
 import '../core/widgets/yukitas_bottom_navigation.dart';
 import '../domain/places/saved_place_repository.dart';
+import '../domain/requests/request_board_repository.dart';
 import '../domain/requests/request_repository.dart';
+import '../domain/requests/request_summary.dart';
 import '../domain/requests/snow_request.dart';
 import '../domain/stats/region_stats_repository.dart';
 import '../domain/weather/weather_forecast_repository.dart';
@@ -28,6 +33,7 @@ import '../features/worker/worker_map_screen.dart';
 import '../features/worker/worker_request_detail_screen.dart';
 import '../infrastructure/notifications/demo_push_notification_service.dart';
 import '../infrastructure/places/in_memory_saved_place_repository.dart';
+import '../infrastructure/requests/in_memory_request_board_repository.dart';
 import '../infrastructure/requests/in_memory_request_repository.dart';
 import '../infrastructure/stats/demo_region_stats_repository.dart';
 import '../infrastructure/weather/demo_weather_forecast_repository.dart';
@@ -46,6 +52,8 @@ class ModeShell extends StatefulWidget {
     this.disposeRegionStatsRepository = false,
     this.weatherForecastRepository,
     this.disposeWeatherForecastRepository = false,
+    this.boardRepository,
+    this.disposeBoardRepository = false,
     this.currentUserId = 'demo-worker-takumi',
     this.currentUserName = '佐藤 拓海さん',
     this.photoPicker,
@@ -64,6 +72,8 @@ class ModeShell extends StatefulWidget {
   final bool disposeRegionStatsRepository;
   final WeatherForecastRepository? weatherForecastRepository;
   final bool disposeWeatherForecastRepository;
+  final RequestBoardRepository? boardRepository;
+  final bool disposeBoardRepository;
   final String currentUserId;
   final String currentUserName;
   final RequestPhotoPicker? photoPicker;
@@ -81,6 +91,7 @@ class _ModeShellState extends State<ModeShell> {
   late final PushNotificationService _pushNotificationService;
   late final RegionStatsRepository _regionStatsRepository;
   late final WeatherForecastRepository _weatherForecastRepository;
+  late final RequestBoardRepository _boardRepository;
   UserMode _mode = UserMode.requester;
   int _requesterIndex = 0;
   int _workerIndex = 0;
@@ -93,6 +104,22 @@ class _ModeShellState extends State<ModeShell> {
   /// requester's 依頼履歴 tab as if it were the requester's own request).
   String? _activeOwnedRequestId;
   String? _activeAssignedRequestId;
+
+  /// Where "near me" is measured from. Distance is a relation between a
+  /// worker and a request, so it belongs here with the viewer rather than on
+  /// the request document, which used to carry one fixed value for everyone.
+  double _originLatitude = niigataCenter.latitude;
+  double _originLongitude = niigataCenter.longitude;
+
+  /// The geohash cells around [_originLatitude]/[_originLongitude] - what
+  /// "nearby" means for both the board query and new-request pushes.
+  List<String> get _nearbyCells => geohashNeighbours(
+    encodeGeohash(
+      _originLatitude,
+      _originLongitude,
+      precision: boardCellPrecision,
+    ),
+  );
 
   /// Requests the requester has already rated and closed out. They stay in
   /// the history list but must not be re-adopted as the tracked request,
@@ -111,18 +138,50 @@ class _ModeShellState extends State<ModeShell> {
         widget.regionStatsRepository ?? DemoRegionStatsRepository();
     _weatherForecastRepository =
         widget.weatherForecastRepository ?? DemoWeatherForecastRepository();
+    _boardRepository =
+        widget.boardRepository ??
+        InMemoryRequestBoardRepository(requests: _repository);
     _restoreActiveRequest();
     _repository.addListener(_repositoryChanged);
     _savedPlaceRepository.addListener(_savedPlacesChanged);
     _regionStatsRepository.addListener(_regionStatsChanged);
     _weatherForecastRepository.addListener(_weatherForecastChanged);
+    _boardRepository.addListener(_boardChanged);
     unawaited(
       _pushNotificationService.initialize().then(
         (_) => _pushNotificationService.setWorkerSubscribed(
           _mode == UserMode.worker,
+          cells: _nearbyCells,
         ),
       ),
     );
+    unawaited(_resolveOrigin());
+  }
+
+  /// Moves "near me" to the device's actual position and re-scopes the board
+  /// to the cells around it. Best effort: with location off or denied we
+  /// stay on the demo origin, which is also what widget tests run on.
+  Future<void> _resolveOrigin() async {
+    try {
+      final position = await resolveCurrentPosition();
+      if (!mounted) return;
+      setState(() {
+        _originLatitude = position.latitude;
+        _originLongitude = position.longitude;
+      });
+      _boardRepository.setOrigin(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+      unawaited(
+        _pushNotificationService.setWorkerSubscribed(
+          _mode == UserMode.worker,
+          cells: _nearbyCells,
+        ),
+      );
+    } catch (_) {
+      // Location is a convenience here, never a gate.
+    }
   }
 
   @override
@@ -155,6 +214,11 @@ class _ModeShellState extends State<ModeShell> {
         _weatherForecastRepository is ChangeNotifier) {
       (_weatherForecastRepository as ChangeNotifier).dispose();
     }
+    _boardRepository.removeListener(_boardChanged);
+    if ((widget.boardRepository == null || widget.disposeBoardRepository) &&
+        _boardRepository is ChangeNotifier) {
+      (_boardRepository as ChangeNotifier).dispose();
+    }
     super.dispose();
   }
 
@@ -174,6 +238,11 @@ class _ModeShellState extends State<ModeShell> {
   }
 
   void _weatherForecastChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _boardChanged() {
     if (!mounted) return;
     setState(() {});
   }
@@ -215,28 +284,21 @@ class _ModeShellState extends State<ModeShell> {
     return null;
   }
 
-  /// Requests shown on the aggregate 地域雪マップ (home preview + full map):
-  /// completed jobs are done and clutter a map meant to show current
-  /// activity, so they drop off once finished. A single request's own
-  /// status screen still shows its pin after completion - see
-  /// RequestStatusScreen's direct SnowMap(requests: [request]) usage.
-  List<SnowRequest> get _mapVisibleRequests =>
-      _repository.requests
-          .where(
-            (request) =>
-                request.status != RequestStatus.draft &&
-                request.status != RequestStatus.cancelled &&
-                request.status != RequestStatus.completed &&
-                request.status != RequestStatus.disputed,
-          )
-          .toList();
+  /// Requests shown on the aggregate 地域雪マップ (home preview + full map).
+  ///
+  /// Sourced from the public board, so each pin sits at a cell center rather
+  /// than a front door. The board itself only carries live work, so finished
+  /// and withdrawn jobs drop off without any filtering here. A requester's
+  /// own request is still pinned at its true location on its own status
+  /// screen - see RequestStatusScreen's MapPin.fromRequest usage.
+  List<RequestSummary> get _mapVisibleRequests => _boardRepository.summaries;
 
-  List<SnowRequest> get _availableRequests =>
-      _repository.requests
+  List<RequestSummary> get _availableRequests =>
+      _boardRepository.summaries
           .where(
-            (request) =>
-                request.status == RequestStatus.waiting &&
-                request.ownerId != widget.currentUserId,
+            (summary) =>
+                summary.status == RequestStatus.waiting &&
+                summary.ownerId != widget.currentUserId,
           )
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -299,6 +361,7 @@ class _ModeShellState extends State<ModeShell> {
       unawaited(
         _pushNotificationService.setWorkerSubscribed(
           _mode == UserMode.worker,
+          cells: _nearbyCells,
         ),
       );
       if (_mode == UserMode.worker) {
@@ -383,12 +446,14 @@ class _ModeShellState extends State<ModeShell> {
     });
   }
 
-  Future<void> _openWorkerRequest(SnowRequest request) async {
+  Future<void> _openWorkerRequest(RequestSummary request) async {
     final accepted = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder:
             (context) => WorkerRequestDetailScreen(
               request: request,
+              originLatitude: _originLatitude,
+              originLongitude: _originLongitude,
               onAccept:
                   () => _repository.accept(
                     requestId: request.id,
@@ -536,6 +601,22 @@ class _ModeShellState extends State<ModeShell> {
     });
   }
 
+  /// Dismisses the worker's currently tracked job (reward screen's "次の依頼
+  /// を探す", disputed screen's same button). Must add the id to
+  /// [_finishedRequestIds] - same as [_finishActiveRequest] does for the
+  /// owner side - otherwise _restoreTrackedRequestId still considers the job
+  /// active (disputed is a tracked status, and a completed job stays
+  /// unfinished until the owner rates it) and re-adopts it on the very next
+  /// mode switch, making this button a no-op.
+  void _dismissAssignedRequest() {
+    setState(() {
+      final finishedId = _activeAssignedRequestId;
+      if (finishedId != null) _finishedRequestIds.add(finishedId);
+      _activeAssignedRequestId = null;
+      _workerIndex = 1;
+    });
+  }
+
   Widget _workerBody() {
     if (_workerIndex == 0 &&
         _activeAssignedRequest != null &&
@@ -547,11 +628,7 @@ class _ModeShellState extends State<ModeShell> {
         onReportProblem: _reportAssignedRequestProblem,
         photoPicker: widget.photoPicker,
         photoStorage: widget.photoStorage,
-        onFindNextRequest:
-            () => setState(() {
-              _activeAssignedRequestId = null;
-              _workerIndex = 1;
-            }),
+        onFindNextRequest: _dismissAssignedRequest,
       );
     }
     return switch (_workerIndex) {
@@ -560,11 +637,15 @@ class _ModeShellState extends State<ModeShell> {
         onOpenList: () => _selectDestination(1),
         requests: _availableRequests,
         onOpenRequest: _openWorkerRequest,
+        originLatitude: _originLatitude,
+        originLongitude: _originLongitude,
       ),
       1 => WorkerListScreen(
         onToggleMode: _toggleMode,
         requests: _availableRequests,
         onOpenRequest: _openWorkerRequest,
+        originLatitude: _originLatitude,
+        originLongitude: _originLongitude,
       ),
       2 => WorkerAchievementsScreen(
         key: const ValueKey('worker-achievements'),
