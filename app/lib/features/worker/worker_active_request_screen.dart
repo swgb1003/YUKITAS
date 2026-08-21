@@ -10,6 +10,7 @@ import '../../core/formatters/yukitas_formatters.dart';
 import '../../core/theme/yukitas_colors.dart';
 import '../../core/widgets/frosted_card.dart';
 import '../../core/widgets/gradient_action_button.dart';
+import '../../core/widgets/report_problem_dialog.dart';
 import '../../core/widgets/request_progress_indicator.dart';
 import '../../core/widgets/request_photo_image.dart';
 import '../../core/widgets/route_map.dart';
@@ -21,6 +22,7 @@ class WorkerActiveRequestScreen extends StatefulWidget {
     required this.request,
     required this.onToggleMode,
     required this.onTransition,
+    required this.onReportProblem,
     required this.onFindNextRequest,
     this.photoPicker,
     this.photoStorage = const DemoRequestPhotoStorage(),
@@ -36,6 +38,7 @@ class WorkerActiveRequestScreen extends StatefulWidget {
     String? workMemo,
   )
   onTransition;
+  final Future<bool> Function(String reason) onReportProblem;
   final VoidCallback onFindNextRequest;
   final RequestPhotoPicker? photoPicker;
   final RequestPhotoStorage photoStorage;
@@ -173,6 +176,20 @@ class _WorkerActiveRequestScreenState extends State<WorkerActiveRequestScreen> {
     }
   }
 
+  Future<void> _reportProblem() async {
+    final reason = await promptForReportReason(context);
+    if (reason == null || !mounted) return;
+    setState(() => _busy = true);
+    final succeeded = await widget.onReportProblem(reason);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (!succeeded) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('問題を報告できませんでした')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return switch (widget.request.status) {
@@ -182,8 +199,75 @@ class _WorkerActiveRequestScreenState extends State<WorkerActiveRequestScreen> {
       RequestStatus.working => _buildWorking(context),
       RequestStatus.reviewing => _buildAwaitingReview(context),
       RequestStatus.completed => _buildReward(context),
+      RequestStatus.disputed => _buildDisputed(context),
       _ => const SizedBox.shrink(),
     };
+  }
+
+  Widget _buildDisputed(BuildContext context) {
+    return _WorkerPage(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            YukitasScreenHeader(
+              mode: UserMode.worker,
+              eyebrow: 'ON HOLD',
+              title: '問題が報告されています',
+              subtitle: '確認のため作業を一時停止しています',
+              onToggleMode: widget.onToggleMode,
+            ),
+            const SizedBox(height: 20),
+            FrostedCard(
+              radius: 27,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.report_gmailerrorred_outlined,
+                        color: YukitasColors.sos,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '報告内容',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    widget.request.disputeReason ?? '',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'このデモでは運営確認は省略し、依頼はここで一時停止として扱います。',
+                    style: TextStyle(
+                      color: YukitasColors.muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            GradientActionButton(
+              label: '次の依頼を探す',
+              icon: Icons.search_rounded,
+              workerStyle: true,
+              onPressed: widget.onFindNextRequest,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildMatched(BuildContext context) {
@@ -508,10 +592,8 @@ class _WorkerActiveRequestScreenState extends State<WorkerActiveRequestScreen> {
             const SizedBox(height: 10),
             Center(
               child: TextButton.icon(
-                onPressed:
-                    () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('依頼内容の問題を運営へ報告しました')),
-                    ),
+                key: const Key('report-problem'),
+                onPressed: _busy ? null : _reportProblem,
                 icon: const Icon(Icons.report_gmailerrorred_outlined),
                 label: const Text('依頼内容に問題がある'),
               ),

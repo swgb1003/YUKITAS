@@ -48,6 +48,11 @@ service cloud.firestore {
         'paymentStatus',
         'rating',
         'ratingComment',
+        'disputeReason',
+        'disputedAt',
+        'disputedBy',
+        'cancelReason',
+        'cancelledAt',
         'updatedAt'
       ];
       return data.keys().hasAll(required)
@@ -107,6 +112,11 @@ service cloud.firestore {
         && data.paymentStatus == 'authorized'
         && data.rating == null
         && data.ratingComment == null
+        && data.disputeReason == null
+        && data.disputedAt == null
+        && data.disputedBy == null
+        && data.cancelReason == null
+        && data.cancelledAt == null
         && data.updatedAt == request.time;
     }
 
@@ -198,6 +208,35 @@ service cloud.firestore {
         && usesServerTime('updatedAt');
     }
 
+    function partyReportsProblem() {
+      return (resource.data.ownerId == request.auth.uid
+          || resource.data.workerId == request.auth.uid)
+        && resource.data.status in
+          ['matched', 'moving', 'arrived', 'working', 'reviewing']
+        && request.resource.data.status == 'disputed'
+        && request.resource.data.disputedBy == request.auth.uid
+        && request.resource.data.disputeReason is string
+        && request.resource.data.disputeReason.size() > 0
+        && request.resource.data.disputeReason.size() <= 500
+        && changedOnly(
+          ['status', 'disputeReason', 'disputedAt', 'disputedBy', 'updatedAt']
+        )
+        && usesServerTime('disputedAt')
+        && usesServerTime('updatedAt');
+    }
+
+    function ownerCancelsWhileWaiting() {
+      return resource.data.ownerId == request.auth.uid
+        && resource.data.status == 'waiting'
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.cancelReason is string
+        && request.resource.data.cancelReason.size() > 0
+        && request.resource.data.cancelReason.size() <= 500
+        && changedOnly(['status', 'cancelReason', 'cancelledAt', 'updatedAt'])
+        && usesServerTime('cancelledAt')
+        && usesServerTime('updatedAt');
+    }
+
     match /requests/{requestId} {
       allow read: if signedIn() && (
         resource.data.status == 'waiting'
@@ -213,6 +252,8 @@ service cloud.firestore {
         || assignedWorkerSubmits(requestId)
         || ownerApproves()
         || ownerRates()
+        || partyReportsProblem()
+        || ownerCancelsWhileWaiting()
       );
       allow delete: if false;
     }
@@ -266,6 +307,14 @@ service cloud.firestore {
     // Aggregate counts only, no per-request detail, so any signed-in user
     // may read them; nothing but the Admin SDK may write.
     match /regionStats/{docId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Regional snowfall forecast (spec 06.2 降雪予測), kept updated by the
+    // refreshWeatherSnapshot Cloud Function via the Admin SDK. Read-only to
+    // clients, same reasoning as regionStats.
+    match /weatherSnapshots/{regionId} {
       allow read: if signedIn();
       allow write: if false;
     }

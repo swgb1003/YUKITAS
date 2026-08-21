@@ -13,6 +13,7 @@ import '../domain/places/saved_place_repository.dart';
 import '../domain/requests/request_repository.dart';
 import '../domain/requests/snow_request.dart';
 import '../domain/stats/region_stats_repository.dart';
+import '../domain/weather/weather_forecast_repository.dart';
 import '../features/common/profile_screen.dart';
 import '../features/requester/request_creation_flow.dart';
 import '../features/requester/request_history_screen.dart';
@@ -29,6 +30,7 @@ import '../infrastructure/notifications/demo_push_notification_service.dart';
 import '../infrastructure/places/in_memory_saved_place_repository.dart';
 import '../infrastructure/requests/in_memory_request_repository.dart';
 import '../infrastructure/stats/demo_region_stats_repository.dart';
+import '../infrastructure/weather/demo_weather_forecast_repository.dart';
 import 'user_mode.dart';
 
 class ModeShell extends StatefulWidget {
@@ -42,6 +44,8 @@ class ModeShell extends StatefulWidget {
     this.disposePushNotificationService = false,
     this.regionStatsRepository,
     this.disposeRegionStatsRepository = false,
+    this.weatherForecastRepository,
+    this.disposeWeatherForecastRepository = false,
     this.currentUserId = 'demo-worker-takumi',
     this.currentUserName = '佐藤 拓海さん',
     this.photoPicker,
@@ -58,6 +62,8 @@ class ModeShell extends StatefulWidget {
   final bool disposePushNotificationService;
   final RegionStatsRepository? regionStatsRepository;
   final bool disposeRegionStatsRepository;
+  final WeatherForecastRepository? weatherForecastRepository;
+  final bool disposeWeatherForecastRepository;
   final String currentUserId;
   final String currentUserName;
   final RequestPhotoPicker? photoPicker;
@@ -74,6 +80,7 @@ class _ModeShellState extends State<ModeShell> {
   late final SavedPlaceRepository _savedPlaceRepository;
   late final PushNotificationService _pushNotificationService;
   late final RegionStatsRepository _regionStatsRepository;
+  late final WeatherForecastRepository _weatherForecastRepository;
   UserMode _mode = UserMode.requester;
   int _requesterIndex = 0;
   int _workerIndex = 0;
@@ -102,10 +109,13 @@ class _ModeShellState extends State<ModeShell> {
         widget.pushNotificationService ?? DemoPushNotificationService();
     _regionStatsRepository =
         widget.regionStatsRepository ?? DemoRegionStatsRepository();
+    _weatherForecastRepository =
+        widget.weatherForecastRepository ?? DemoWeatherForecastRepository();
     _restoreActiveRequest();
     _repository.addListener(_repositoryChanged);
     _savedPlaceRepository.addListener(_savedPlacesChanged);
     _regionStatsRepository.addListener(_regionStatsChanged);
+    _weatherForecastRepository.addListener(_weatherForecastChanged);
     unawaited(
       _pushNotificationService.initialize().then(
         (_) => _pushNotificationService.setWorkerSubscribed(
@@ -139,6 +149,12 @@ class _ModeShellState extends State<ModeShell> {
         _regionStatsRepository is ChangeNotifier) {
       (_regionStatsRepository as ChangeNotifier).dispose();
     }
+    _weatherForecastRepository.removeListener(_weatherForecastChanged);
+    if ((widget.weatherForecastRepository == null ||
+            widget.disposeWeatherForecastRepository) &&
+        _weatherForecastRepository is ChangeNotifier) {
+      (_weatherForecastRepository as ChangeNotifier).dispose();
+    }
     super.dispose();
   }
 
@@ -153,6 +169,11 @@ class _ModeShellState extends State<ModeShell> {
   }
 
   void _regionStatsChanged() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _weatherForecastChanged() {
     if (!mounted) return;
     setState(() {});
   }
@@ -205,7 +226,8 @@ class _ModeShellState extends State<ModeShell> {
             (request) =>
                 request.status != RequestStatus.draft &&
                 request.status != RequestStatus.cancelled &&
-                request.status != RequestStatus.completed,
+                request.status != RequestStatus.completed &&
+                request.status != RequestStatus.disputed,
           )
           .toList();
 
@@ -264,7 +286,8 @@ class _ModeShellState extends State<ModeShell> {
       status == RequestStatus.arrived ||
       status == RequestStatus.working ||
       status == RequestStatus.reviewing ||
-      status == RequestStatus.completed;
+      status == RequestStatus.completed ||
+      status == RequestStatus.disputed;
 
   bool _isTrackedStatus(RequestStatus status) =>
       status == RequestStatus.waiting || _isActiveWorkerStatus(status);
@@ -414,6 +437,36 @@ class _ModeShellState extends State<ModeShell> {
     );
   }
 
+  Future<bool> _reportAssignedRequestProblem(String reason) async {
+    final request = _activeAssignedRequest;
+    if (request == null) return false;
+    return _repository.reportProblem(
+      requestId: request.id,
+      reporterId: widget.currentUserId,
+      reason: reason,
+    );
+  }
+
+  Future<bool> _reportOwnedRequestProblem(String reason) async {
+    final request = _activeOwnedRequest;
+    if (request == null) return false;
+    return _repository.reportProblem(
+      requestId: request.id,
+      reporterId: widget.currentUserId,
+      reason: reason,
+    );
+  }
+
+  Future<bool> _cancelOwnedRequest(String reason) async {
+    final request = _activeOwnedRequest;
+    if (request == null) return false;
+    return _repository.cancel(
+      requestId: request.id,
+      ownerId: widget.currentUserId,
+      reason: reason,
+    );
+  }
+
   Future<bool> _submitRating(int rating, String? comment) async {
     final request = _activeOwnedRequest;
     if (request == null) return false;
@@ -437,6 +490,7 @@ class _ModeShellState extends State<ModeShell> {
         requests: _mapVisibleRequests,
         onOpenSnowMap: () => _selectDestination(1),
         stats: _regionStatsRepository.stats,
+        forecast: _weatherForecastRepository.forecast,
       ),
       1 => RequesterSnowMapScreen(
         key: const ValueKey('requester-snow-map'),
@@ -448,6 +502,8 @@ class _ModeShellState extends State<ModeShell> {
         onToggleMode: _toggleMode,
         onApproveCompletion: _approveCompletion,
         onSubmitRating: _submitRating,
+        onReportProblem: _reportOwnedRequestProblem,
+        onCancel: _cancelOwnedRequest,
         onFinish: () => _finishActiveRequest(),
         completedToday: _regionStatsRepository.stats.completedToday,
       ),
@@ -488,6 +544,7 @@ class _ModeShellState extends State<ModeShell> {
         request: _activeAssignedRequest!,
         onToggleMode: _toggleMode,
         onTransition: _transitionActiveRequest,
+        onReportProblem: _reportAssignedRequestProblem,
         photoPicker: widget.photoPicker,
         photoStorage: widget.photoStorage,
         onFindNextRequest:

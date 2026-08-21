@@ -13,6 +13,7 @@ interface RequestDoc {
   status: string;
   isSos: boolean;
   rating: number | null;
+  disputedBy: string | null;
 }
 
 /**
@@ -67,6 +68,18 @@ function buildChangeNotifications(
         title: "依頼がキャンセルされました",
         body: `${after.placeName}の依頼はキャンセルされました`,
       });
+    }
+
+    if (after.status === "disputed") {
+      const otherPartyId =
+        after.disputedBy === after.ownerId ? after.workerId : after.ownerId;
+      if (otherPartyId) {
+        notifications.push({
+          userId: otherPartyId,
+          title: "問題が報告されました",
+          body: `${after.placeName}の依頼で問題が報告されました。内容を確認してください`,
+        });
+      }
     }
   }
 

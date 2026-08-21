@@ -32,6 +32,21 @@ flutter run
 For an offline/demo build, pass `--dart-define=YUKITAS_STORAGE_ENABLED=false`
 to keep using the bundled photos instead of Firebase Storage.
 
+### Snowfall forecast
+
+The home screen's forecast card and the family heavy-snow push notification
+(spec 06.2) are backed by `weatherSnapshots/niigata-shi`, refreshed every 3
+hours by the `refreshWeatherSnapshot` Cloud Function from
+[Open-Meteo](https://open-meteo.com/) (no API key required). Deploy it like
+any other function:
+
+```powershell
+firebase deploy --only functions:refreshWeatherSnapshot,functions:notifyFamilyOnHeavySnowfall
+```
+
+Scheduled functions require the Blaze plan, same as `analyzeSnowPhoto`.
+Without Firebase, the app falls back to the fixed demo forecast (-2℃, 30cm).
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

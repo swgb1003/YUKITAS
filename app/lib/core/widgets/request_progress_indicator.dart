@@ -19,7 +19,7 @@ class RequestProgressIndicator extends StatelessWidget {
     RequestStatus.arrived => 2,
     RequestStatus.working || RequestStatus.reviewing => 3,
     RequestStatus.completed => 4,
-    RequestStatus.cancelled => 0,
+    RequestStatus.cancelled || RequestStatus.disputed => 0,
   };
 
   @override

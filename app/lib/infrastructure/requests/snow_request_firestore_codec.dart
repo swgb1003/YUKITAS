@@ -40,6 +40,11 @@ class SnowRequestFirestoreCodec {
       'paymentStatus': request.paymentStatus.name,
       'rating': request.rating,
       'ratingComment': request.ratingComment,
+      'disputeReason': request.disputeReason,
+      'disputedAt': _encodeDate(request.disputedAt),
+      'disputedBy': request.disputedBy,
+      'cancelReason': request.cancelReason,
+      'cancelledAt': _encodeDate(request.cancelledAt),
       'updatedAt': updatedAt ?? Timestamp.now(),
     };
   }
@@ -80,6 +85,11 @@ class SnowRequestFirestoreCodec {
       paymentStatus: _paymentStatus(data['paymentStatus']),
       rating: (data['rating'] as num?)?.toInt(),
       ratingComment: data['ratingComment'] as String?,
+      disputeReason: data['disputeReason'] as String?,
+      disputedAt: _decodeDate(data['disputedAt']),
+      disputedBy: data['disputedBy'] as String?,
+      cancelReason: data['cancelReason'] as String?,
+      cancelledAt: _decodeDate(data['cancelledAt']),
     );
   }
 

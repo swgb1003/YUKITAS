@@ -8,6 +8,7 @@ enum RequestStatus {
   reviewing,
   completed,
   cancelled,
+  disputed,
 }
 
 extension RequestStatusPresentation on RequestStatus {
@@ -21,6 +22,7 @@ extension RequestStatusPresentation on RequestStatus {
     RequestStatus.reviewing => '完了写真を確認してください',
     RequestStatus.completed => '除雪完了',
     RequestStatus.cancelled => 'キャンセル済み',
+    RequestStatus.disputed => '問題が報告されています',
   };
 
   String get workerLabel => switch (this) {
@@ -33,8 +35,19 @@ extension RequestStatusPresentation on RequestStatus {
     RequestStatus.reviewing => '依頼者の確認待ち',
     RequestStatus.completed => 'お疲れさまでした',
     RequestStatus.cancelled => 'キャンセル済み',
+    RequestStatus.disputed => '問題の報告を受け、一時停止しています',
   };
 }
+
+/// Statuses at which either party (owner or assigned worker) may raise a
+/// dispute (spec 09章: "matched以降 → cancelled / disputed 当事者 理由必須").
+const disputableRequestStatuses = {
+  RequestStatus.matched,
+  RequestStatus.moving,
+  RequestStatus.arrived,
+  RequestStatus.working,
+  RequestStatus.reviewing,
+};
 
 class SnowRequest {
   const SnowRequest({
@@ -70,6 +83,11 @@ class SnowRequest {
     this.paymentStatus = DemoPaymentStatus.authorized,
     this.rating,
     this.ratingComment,
+    this.disputeReason,
+    this.disputedAt,
+    this.disputedBy,
+    this.cancelReason,
+    this.cancelledAt,
   });
 
   final String id;
@@ -105,6 +123,18 @@ class SnowRequest {
   final int? rating;
   final String? ratingComment;
 
+  /// Set together when a party raises a dispute (spec 09章). [disputedBy]
+  /// holds the reporting user's id, so the other party can be notified and
+  /// no one else can claim to have filed a report they didn't.
+  final String? disputeReason;
+  final DateTime? disputedAt;
+  final String? disputedBy;
+
+  /// Set together when the owner cancels a still-unmatched request (spec
+  /// 09章: "waiting → cancelled 依頼者 未受注。キャンセル理由を記録。").
+  final String? cancelReason;
+  final DateTime? cancelledAt;
+
   bool get isAvailable => status == RequestStatus.waiting && workerId == null;
 
   String get workTitle => '${workAreas.join('・')}の除雪';
@@ -127,6 +157,11 @@ class SnowRequest {
     DemoPaymentStatus? paymentStatus,
     int? rating,
     String? ratingComment,
+    String? disputeReason,
+    DateTime? disputedAt,
+    String? disputedBy,
+    String? cancelReason,
+    DateTime? cancelledAt,
   }) {
     return SnowRequest(
       id: id ?? this.id,
@@ -161,6 +196,11 @@ class SnowRequest {
       paymentStatus: paymentStatus ?? this.paymentStatus,
       rating: rating ?? this.rating,
       ratingComment: ratingComment ?? this.ratingComment,
+      disputeReason: disputeReason ?? this.disputeReason,
+      disputedAt: disputedAt ?? this.disputedAt,
+      disputedBy: disputedBy ?? this.disputedBy,
+      cancelReason: cancelReason ?? this.cancelReason,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
     );
   }
 }

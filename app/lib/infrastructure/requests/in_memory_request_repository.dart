@@ -239,4 +239,59 @@ class InMemoryRequestRepository extends ChangeNotifier
     notifyListeners();
     return true;
   }
+
+  @override
+  Future<bool> reportProblem({
+    required String requestId,
+    required String reporterId,
+    required String reason,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 240));
+    final trimmedReason = reason.trim();
+    if (trimmedReason.isEmpty) return false;
+    final index = _requests.indexWhere((item) => item.id == requestId);
+    if (index == -1) return false;
+
+    final request = _requests[index];
+    final isParty =
+        reporterId == request.ownerId || reporterId == request.workerId;
+    if (!isParty || !disputableRequestStatuses.contains(request.status)) {
+      return false;
+    }
+
+    _requests[index] = request.copyWith(
+      status: RequestStatus.disputed,
+      disputeReason: trimmedReason,
+      disputedAt: DateTime.now(),
+      disputedBy: reporterId,
+    );
+    notifyListeners();
+    return true;
+  }
+
+  @override
+  Future<bool> cancel({
+    required String requestId,
+    required String ownerId,
+    required String reason,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 240));
+    final trimmedReason = reason.trim();
+    if (trimmedReason.isEmpty) return false;
+    final index = _requests.indexWhere((item) => item.id == requestId);
+    if (index == -1) return false;
+
+    final request = _requests[index];
+    if (request.ownerId != ownerId || request.status != RequestStatus.waiting) {
+      return false;
+    }
+
+    _requests[index] = request.copyWith(
+      status: RequestStatus.cancelled,
+      cancelReason: trimmedReason,
+      cancelledAt: DateTime.now(),
+    );
+    notifyListeners();
+    return true;
+  }
 }

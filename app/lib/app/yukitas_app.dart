@@ -15,6 +15,7 @@ import '../infrastructure/places/firestore_saved_place_repository.dart';
 import '../infrastructure/requests/cloud_function_snow_analysis_provider.dart';
 import '../infrastructure/requests/firestore_request_repository.dart';
 import '../infrastructure/stats/firestore_region_stats_repository.dart';
+import '../infrastructure/weather/firestore_weather_forecast_repository.dart';
 import 'app_config.dart';
 import 'app_routes.dart';
 import 'mode_shell.dart';
@@ -80,6 +81,8 @@ class YukitasApp extends StatelessWidget {
               disposePushNotificationService: true,
               regionStatsRepository: FirestoreRegionStatsRepository(),
               disposeRegionStatsRepository: true,
+              weatherForecastRepository: FirestoreWeatherForecastRepository(),
+              disposeWeatherForecastRepository: true,
               currentUserId: user.id,
               currentUserName:
                   displayName == null || displayName.isEmpty

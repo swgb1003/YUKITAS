@@ -7,6 +7,7 @@ void main() {
   test('Firestore codec preserves a request through a round trip', () {
     final createdAt = DateTime.utc(2026, 1, 15, 1, 30);
     final startedAt = DateTime.utc(2026, 1, 15, 2, 15);
+    final disputedAt = DateTime.utc(2026, 1, 15, 2, 40);
     final request = SnowRequest(
       id: 'request-1',
       ownerId: 'owner-1',
@@ -30,6 +31,9 @@ void main() {
       workerName: '佐藤 拓海さん',
       safetyConfirmedAt: startedAt,
       startedAt: startedAt,
+      disputeReason: '玄関前に不明な障害物があり安全確認できません',
+      disputedAt: disputedAt,
+      disputedBy: 'worker-1',
     );
 
     final encoded = SnowRequestFirestoreCodec.encode(
@@ -54,5 +58,11 @@ void main() {
       startedAt.millisecondsSinceEpoch,
     );
     expect(decoded.paymentStatus, DemoPaymentStatus.authorized);
+    expect(decoded.disputeReason, request.disputeReason);
+    expect(
+      decoded.disputedAt?.millisecondsSinceEpoch,
+      disputedAt.millisecondsSinceEpoch,
+    );
+    expect(decoded.disputedBy, request.disputedBy);
   });
 }

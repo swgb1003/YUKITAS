@@ -92,6 +92,12 @@ RequestStatusTone statusTone(RequestStatus status) => switch (status) {
     background: Color(0xFFF1F6F9),
     border: YukitasColors.outline,
   ),
+  RequestStatus.disputed => const RequestStatusTone(
+    label: '要確認',
+    foreground: YukitasColors.sos,
+    background: Color(0xFFFFEEF2),
+    border: Color(0xFFFFB5C4),
+  ),
 };
 
 /// Small pink "SOS" pill shared by the history and achievement lists.

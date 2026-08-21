@@ -183,6 +183,54 @@ class FirestoreRequestRepository extends ChangeNotifier
     });
   }
 
+  @override
+  Future<bool> reportProblem({
+    required String requestId,
+    required String reporterId,
+    required String reason,
+  }) async {
+    if (reporterId != userId) return false;
+    final trimmedReason = reason.trim();
+    if (trimmedReason.isEmpty) return false;
+    return _runRequestTransaction(requestId, (transaction, reference, request) {
+      final isParty = userId == request.ownerId || userId == request.workerId;
+      if (!isParty || !disputableRequestStatuses.contains(request.status)) {
+        return false;
+      }
+      transaction.update(reference, <String, Object?>{
+        'status': RequestStatus.disputed.name,
+        'disputeReason': trimmedReason,
+        'disputedAt': FieldValue.serverTimestamp(),
+        'disputedBy': userId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    });
+  }
+
+  @override
+  Future<bool> cancel({
+    required String requestId,
+    required String ownerId,
+    required String reason,
+  }) async {
+    if (ownerId != userId) return false;
+    final trimmedReason = reason.trim();
+    if (trimmedReason.isEmpty) return false;
+    return _runRequestTransaction(requestId, (transaction, reference, request) {
+      if (request.ownerId != userId || request.status != RequestStatus.waiting) {
+        return false;
+      }
+      transaction.update(reference, <String, Object?>{
+        'status': RequestStatus.cancelled.name,
+        'cancelReason': trimmedReason,
+        'cancelledAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    });
+  }
+
   Future<bool> _runRequestTransaction(
     String requestId,
     bool Function(

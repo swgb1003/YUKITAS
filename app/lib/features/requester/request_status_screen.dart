@@ -7,6 +7,7 @@ import '../../core/theme/yukitas_colors.dart';
 import '../../core/widgets/frosted_card.dart';
 import '../../core/widgets/gradient_action_button.dart';
 import '../../core/widgets/mode_switch_button.dart';
+import '../../core/widgets/report_problem_dialog.dart';
 import '../../core/widgets/request_progress_indicator.dart';
 import '../../core/widgets/request_photo_image.dart';
 import '../../core/widgets/route_map.dart';
@@ -19,6 +20,8 @@ class RequestStatusScreen extends StatefulWidget {
     required this.onToggleMode,
     required this.onApproveCompletion,
     required this.onSubmitRating,
+    required this.onReportProblem,
+    required this.onCancel,
     required this.onFinish,
     super.key,
     this.completedToday = 347,
@@ -28,6 +31,8 @@ class RequestStatusScreen extends StatefulWidget {
   final VoidCallback onToggleMode;
   final Future<bool> Function() onApproveCompletion;
   final Future<bool> Function(int rating, String? comment) onSubmitRating;
+  final Future<bool> Function(String reason) onReportProblem;
+  final Future<bool> Function(String reason) onCancel;
   final VoidCallback onFinish;
   final int completedToday;
 
@@ -79,13 +84,106 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
     }
   }
 
+  Future<void> _reportProblem() async {
+    final reason = await promptForReportReason(context);
+    if (reason == null || !mounted) return;
+    setState(() => _busy = true);
+    final succeeded = await widget.onReportProblem(reason);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (!succeeded) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('問題を報告できませんでした')));
+    }
+  }
+
+  Future<void> _cancel() async {
+    final reason = await promptForCancelReason(context);
+    if (reason == null || !mounted) return;
+    setState(() => _busy = true);
+    final succeeded = await widget.onCancel(reason);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (!succeeded) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('依頼をキャンセルできませんでした')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return switch (widget.request.status) {
       RequestStatus.reviewing => _buildCompletionReview(context),
       RequestStatus.completed => _buildCompleted(context),
+      RequestStatus.disputed => _buildDisputed(context),
       _ => _buildProgress(context),
     };
+  }
+
+  Widget _buildDisputed(BuildContext context) {
+    final request = widget.request;
+    return _RequesterPage(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StatusHeader(
+              title: '問題が報告されています',
+              subtitle: '内容を確認し、必要な対応をご検討ください',
+              onToggleMode: widget.onToggleMode,
+            ),
+            const SizedBox(height: 20),
+            FrostedCard(
+              radius: 27,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.report_gmailerrorred_outlined,
+                        color: YukitasColors.sos,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '報告内容',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    request.disputeReason ?? '',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'このデモでは運営確認は省略し、依頼はここで一時停止として扱います。',
+                    style: TextStyle(
+                      color: YukitasColors.muted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            GradientActionButton(
+              label: 'ホームに戻る',
+              icon: Icons.home_rounded,
+              onPressed: widget.onFinish,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildProgress(BuildContext context) {
@@ -156,7 +254,10 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
               child:
                   hasWorker
                       ? _WorkerProgressCard(request: request)
-                      : _MatchingCard(request: request),
+                      : _MatchingCard(
+                        request: request,
+                        onCancel: _busy ? null : _cancel,
+                      ),
             ),
           ],
         ),
@@ -281,24 +382,7 @@ class _RequestStatusScreenState extends State<RequestStatusScreen> {
                 Expanded(
                   child: OutlinedButton(
                     key: const Key('report-completion-problem'),
-                    onPressed:
-                        () => showDialog<void>(
-                          context: context,
-                          builder:
-                              (dialogContext) => AlertDialog(
-                                title: const Text('問題を報告'),
-                                content: const Text(
-                                  '写真や作業内容に問題がある場合は、運営が確認します。このデモでは依頼を確認待ちのまま保持します。',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed:
-                                        () => Navigator.of(dialogContext).pop(),
-                                    child: const Text('閉じる'),
-                                  ),
-                                ],
-                              ),
-                        ),
+                    onPressed: _busy ? null : _reportProblem,
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(58),
                       shape: RoundedRectangleBorder(
@@ -722,8 +806,9 @@ class _LocalImpactCard extends StatelessWidget {
 }
 
 class _MatchingCard extends StatelessWidget {
-  const _MatchingCard({required this.request});
+  const _MatchingCard({required this.request, this.onCancel});
   final SnowRequest request;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -773,6 +858,14 @@ class _MatchingCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           _PlaceSummary(request: request),
+          if (onCancel != null) ...[
+            const SizedBox(height: 12),
+            TextButton(
+              key: const Key('cancel-request'),
+              onPressed: onCancel,
+              child: const Text('依頼をキャンセル'),
+            ),
+          ],
         ],
       ),
     );

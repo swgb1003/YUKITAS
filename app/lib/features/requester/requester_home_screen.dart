@@ -9,6 +9,7 @@ import '../../core/widgets/mode_switch_button.dart';
 import '../../core/widgets/snow_map.dart';
 import '../../domain/requests/snow_request.dart';
 import '../../domain/stats/region_stats.dart';
+import '../../domain/weather/snowfall_forecast.dart';
 
 class RequesterHomeScreen extends StatelessWidget {
   const RequesterHomeScreen({
@@ -18,6 +19,7 @@ class RequesterHomeScreen extends StatelessWidget {
     required this.onOpenSnowMap,
     super.key,
     this.stats = RegionStats.demo,
+    this.forecast = SnowfallForecast.demo,
   });
 
   final VoidCallback onToggleMode;
@@ -25,6 +27,7 @@ class RequesterHomeScreen extends StatelessWidget {
   final List<SnowRequest> requests;
   final VoidCallback onOpenSnowMap;
   final RegionStats stats;
+  final SnowfallForecast forecast;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +49,7 @@ class RequesterHomeScreen extends StatelessWidget {
                 onToggleMode: onToggleMode,
                 onCreateRequest: onCreateRequest,
                 stats: stats,
+                forecast: forecast,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
@@ -104,9 +108,11 @@ class _WeatherHero extends StatelessWidget {
     required this.onToggleMode,
     required this.onCreateRequest,
     required this.stats,
+    required this.forecast,
   });
 
   final RegionStats stats;
+  final SnowfallForecast forecast;
   final VoidCallback onToggleMode;
   final VoidCallback onCreateRequest;
 
@@ -215,7 +221,7 @@ class _WeatherHero extends StatelessWidget {
                   text: TextSpan(
                     style: Theme.of(context).textTheme.displayLarge,
                     children: [
-                      const TextSpan(text: '-2'),
+                      TextSpan(text: '${forecast.temperatureC}'),
                       TextSpan(
                         text: '℃',
                         style: Theme.of(context).textTheme.titleLarge,
@@ -225,14 +231,14 @@ class _WeatherHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '明朝、30cmの\n降雪予報です',
+                  forecast.headline,
                   style: Theme.of(
                     context,
                   ).textTheme.headlineMedium?.copyWith(height: 1.35),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '登録したご実家周辺で\n大雪が予想されています',
+                  forecast.detail,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: const Color(0xFF54748A),
                     fontWeight: FontWeight.w600,
