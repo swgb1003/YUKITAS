@@ -72,6 +72,19 @@ being completed:
 out of `disputed`; no client rule permits that transition, so a payment can
 never be left frozen with nobody able to settle it.
 
+To grant (or revoke) that claim:
+
+```powershell
+gcloud auth application-default login   # once per machine
+cd functions
+npm run set-admin -- someone@example.com           # grant
+npm run set-admin -- someone@example.com --revoke  # revoke
+npm run set-admin -- --list                        # list current admins
+```
+
+The account must sign out and back in before the claim takes effect - it is
+cached in the ID token.
+
 ### Snowfall forecast
 
 The home screen's forecast card and the family heavy-snow push notification

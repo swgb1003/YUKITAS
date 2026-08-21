@@ -12,7 +12,8 @@
     "shell": "npm run build && firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "set-admin": "node scripts/set-admin-claim.js"
   },
   "dependencies": {
     "firebase-admin": "^14.2.0",

@@ -36,6 +36,12 @@ migrate_working_dir/
 # Local Firebase project identifiers used with --dart-define-from-file.
 firebase_options.local.json
 
+# Never commit a downloaded service account key. scripts/set-admin-claim.js
+# uses Application Default Credentials (gcloud auth application-default
+# login) instead, so this should stay empty - it's a guard, not a workflow.
+functions/*service-account*.json
+functions/*-key.json
+
 # Symbolication related
 app.*.symbols
 
