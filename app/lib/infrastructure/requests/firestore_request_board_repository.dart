@@ -101,6 +101,8 @@ class FirestoreRequestBoardRepository extends ChangeNotifier
       estimatedMinutes: (data['estimatedMinutes'] as num?)?.toInt() ?? 0,
       priceYen: (data['priceYen'] as num?)?.toInt() ?? 0,
       isSos: data['isSos'] as bool? ?? false,
+      parkingAvailable: data['parkingAvailable'] as bool? ?? false,
+      toolsProvided: data['toolsProvided'] as bool? ?? false,
       status: status,
       createdAt:
           createdAt is Timestamp ? createdAt.toDate() : DateTime.now(),

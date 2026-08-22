@@ -30,6 +30,8 @@ service cloud.firestore {
         'priceYen',
         'isSos',
         'sosReason',
+        'parkingAvailable',
+        'toolsProvided',
         'beforeImageAsset',
         'status',
         'createdAt',
@@ -87,6 +89,8 @@ service cloud.firestore {
         && data.priceYen <= 1000000
         && data.isSos is bool
         && (data.sosReason == null || data.sosReason is string)
+        && data.parkingAvailable is bool
+        && data.toolsProvided is bool
         && data.beforeImageAsset is string
         && (
           data.beforeImageAsset == 'assets/images/before_driveway.png'

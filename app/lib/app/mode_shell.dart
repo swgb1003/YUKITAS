@@ -270,14 +270,27 @@ class _ModeShellState extends State<ModeShell> {
     String? currentId,
     bool Function(SnowRequest request) belongsToRole,
   ) {
+    // Keeping an already-selected id uses the full _isTrackedStatus set, so
+    // a request that just became disputed keeps showing for the rest of
+    // this session (both to whoever filed it and, on a mode switch, to the
+    // other party) instead of vanishing the instant it stops being an
+    // in-progress job.
     final selected = currentId == null ? null : _repository.findById(currentId);
     if (selected != null &&
         _isTrackedStatus(selected.status) &&
         !_isFinished(selected)) {
       return currentId;
     }
+    // Freshly picking a request - run on every cold start, since
+    // _activeOwnedRequestId/_activeAssignedRequestId are in-memory and start
+    // null on every launch - excludes disputed. A disputed request awaits an
+    // operator's resolveDispute call (functions/src/disputes.ts); there is
+    // nothing left for either party to do, so it must not keep re-claiming
+    // the home screen on every app open the way live work does. It stays
+    // reachable from 依頼履歴/実績 either way.
     for (final request in _repository.requests) {
       if (!_isTrackedStatus(request.status)) continue;
+      if (request.status == RequestStatus.disputed) continue;
       if (_isFinished(request)) continue;
       if (belongsToRole(request)) return request.id;
     }

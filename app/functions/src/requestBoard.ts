@@ -30,6 +30,8 @@ interface RequestDoc {
   estimatedMinutes: number;
   priceYen: number;
   isSos: boolean;
+  parkingAvailable: boolean;
+  toolsProvided: boolean;
   status: string;
   createdAt: FirebaseFirestore.Timestamp;
 }
@@ -90,6 +92,8 @@ export const syncRequestBoard = onDocumentWritten(
       estimatedMinutes: after.estimatedMinutes ?? 0,
       priceYen: after.priceYen ?? 0,
       isSos: after.isSos ?? false,
+      parkingAvailable: after.parkingAvailable ?? false,
+      toolsProvided: after.toolsProvided ?? false,
       status: after.status,
       createdAt: after.createdAt ?? FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),

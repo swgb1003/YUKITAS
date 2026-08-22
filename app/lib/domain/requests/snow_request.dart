@@ -99,6 +99,8 @@ class SnowRequest {
     required this.beforeImageAsset,
     required this.status,
     required this.createdAt,
+    this.parkingAvailable = false,
+    this.toolsProvided = false,
     this.workerId,
     this.workerName,
     this.acceptedAt,
@@ -136,6 +138,16 @@ class SnowRequest {
   final int priceYen;
   final bool isSos;
   final String? sosReason;
+
+  /// Whether the requester has a spot a worker can park in, and whether
+  /// snow-clearing tools are available on site. Both matter before a worker
+  /// decides whether to drive or walk, and whether they need to bring their
+  /// own shovel - so both are safe to publish on the board (unlike the
+  /// address or photos): they say something about the site, not who lives
+  /// there.
+  final bool parkingAvailable;
+  final bool toolsProvided;
+
   // Note: there is deliberately no distanceKm here. Distance is a relation
   // between a worker and a request, not a property of the request - storing
   // it on the document showed every worker the same fixed number wherever
@@ -223,6 +235,8 @@ class SnowRequest {
       priceYen: priceYen,
       isSos: isSos,
       sosReason: sosReason,
+      parkingAvailable: parkingAvailable,
+      toolsProvided: toolsProvided,
       beforeImageAsset: beforeImageAsset,
       status: status ?? this.status,
       createdAt: createdAt,

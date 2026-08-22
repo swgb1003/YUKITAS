@@ -213,6 +213,7 @@ class _WeatherHero extends StatelessWidget {
           ),
           Positioned(
             left: 24,
+            right: 24,
             top: 118,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

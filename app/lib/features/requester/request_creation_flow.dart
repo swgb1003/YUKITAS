@@ -66,6 +66,8 @@ class _RequestCreationFlowState extends State<RequestCreationFlow> {
       widget.savedPlaces.isNotEmpty ? widget.savedPlaces.first : null;
   double _areaSqm = 18;
   bool _isSos = true;
+  bool _parkingAvailable = false;
+  bool _toolsProvided = false;
   bool _loading = false;
   bool _pickingPhoto = false;
   PickedRequestPhoto? _beforePhoto;
@@ -252,6 +254,8 @@ class _RequestCreationFlowState extends State<RequestCreationFlow> {
       priceYen: estimate.totalYen,
       isSos: _isSos,
       sosReason: _isSos ? '高齢の家族宅を優先してほしい' : null,
+      parkingAvailable: _parkingAvailable,
+      toolsProvided: _toolsProvided,
       beforeImageAsset: _uploadedBeforeImagePath ?? _imageAsset,
       status: RequestStatus.waiting,
       createdAt: DateTime.now(),
@@ -330,8 +334,14 @@ class _RequestCreationFlowState extends State<RequestCreationFlow> {
                 estimate: _estimate!,
                 workAreas: _workAreas,
                 isSos: _isSos,
+                parkingAvailable: _parkingAvailable,
+                toolsProvided: _toolsProvided,
                 isManualEstimate: _isManualEstimate,
                 onSosChanged: (value) => setState(() => _isSos = value),
+                onParkingChanged:
+                    (value) => setState(() => _parkingAvailable = value),
+                onToolsChanged:
+                    (value) => setState(() => _toolsProvided = value),
                 onPublish: _publish,
               ),
             },
@@ -1030,8 +1040,12 @@ class _EstimateStep extends StatelessWidget {
     required this.estimate,
     required this.workAreas,
     required this.isSos,
+    required this.parkingAvailable,
+    required this.toolsProvided,
     required this.isManualEstimate,
     required this.onSosChanged,
+    required this.onParkingChanged,
+    required this.onToolsChanged,
     required this.onPublish,
   });
 
@@ -1041,8 +1055,12 @@ class _EstimateStep extends StatelessWidget {
   final RequestEstimate estimate;
   final Set<String> workAreas;
   final bool isSos;
+  final bool parkingAvailable;
+  final bool toolsProvided;
   final bool isManualEstimate;
   final ValueChanged<bool> onSosChanged;
+  final ValueChanged<bool> onParkingChanged;
+  final ValueChanged<bool> onToolsChanged;
   final VoidCallback onPublish;
 
   @override
@@ -1185,6 +1203,31 @@ class _EstimateStep extends StatelessWidget {
                     Icons.warning_amber_rounded,
                     color: YukitasColors.sos,
                   ),
+                ),
+                const Divider(height: 28),
+                SwitchListTile.adaptive(
+                  key: const Key('parking-toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  value: parkingAvailable,
+                  onChanged: onParkingChanged,
+                  title: const Text(
+                    '駐車スペースあり',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: const Text('車で向かうワーカーの参考になります'),
+                  secondary: const Icon(Icons.local_parking_outlined),
+                ),
+                SwitchListTile.adaptive(
+                  key: const Key('tools-toggle'),
+                  contentPadding: EdgeInsets.zero,
+                  value: toolsProvided,
+                  onChanged: onToolsChanged,
+                  title: const Text(
+                    '除雪用具の貸し出し可',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: const Text('オフの場合、ワーカーは自分の道具を持参します'),
+                  secondary: const Icon(Icons.construction_outlined),
                 ),
               ],
             ),

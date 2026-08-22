@@ -227,6 +227,44 @@ class _FilterChip extends StatelessWidget {
 /// The AI's structured read of that photo goes out instead - snow depth is
 /// the single most useful number for judging effort, and unlike the image it
 /// says nothing about who lives there.
+/// Small positive-only indicator for a request's site amenities (parking,
+/// tools). Shown only when true - the absence of an amenity is the default
+/// and does not need its own badge on an already-dense card; the full
+/// detail screen spells out both states before accepting.
+class _AmenityChip extends StatelessWidget {
+  const _AmenityChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9FBF6),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: const Color(0xFFBCEDE1)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: YukitasColors.safe),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              color: YukitasColors.safe,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _JobScaleTile extends StatelessWidget {
   const _JobScaleTile({required this.request});
 
@@ -406,6 +444,25 @@ class _RequestCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  if (request.parkingAvailable || request.toolsProvided) ...[
+                    const SizedBox(height: 7),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (request.parkingAvailable)
+                          const _AmenityChip(
+                            icon: Icons.local_parking_outlined,
+                            label: '駐車可',
+                          ),
+                        if (request.toolsProvided)
+                          const _AmenityChip(
+                            icon: Icons.construction_outlined,
+                            label: '用具貸与',
+                          ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

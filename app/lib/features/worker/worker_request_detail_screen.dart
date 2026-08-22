@@ -326,6 +326,26 @@ class _WorkerRequestDetailScreenState extends State<WorkerRequestDetailScreen> {
                         subtitle: '雪は敷地右側へまとめる',
                       ),
                       const Divider(height: 26),
+                      _DetailRow(
+                        icon: Icons.local_parking_outlined,
+                        title:
+                            request.parkingAvailable
+                                ? '駐車スペースあり'
+                                : '駐車スペースなし',
+                        subtitle:
+                            request.parkingAvailable
+                                ? '車での訪問に対応できます'
+                                : '徒歩・自転車での訪問がおすすめです',
+                      ),
+                      const Divider(height: 26),
+                      _DetailRow(
+                        icon: Icons.construction_outlined,
+                        title:
+                            request.toolsProvided ? '除雪用具の貸し出しあり' : '除雪用具の貸し出しなし',
+                        subtitle:
+                            request.toolsProvided ? '現地の道具を利用できます' : 'ご自身の道具をお持ちください',
+                      ),
+                      const Divider(height: 26),
                       const _DetailRow(
                         icon: Icons.warning_amber_rounded,
                         title: '門扉付近に段差あり',

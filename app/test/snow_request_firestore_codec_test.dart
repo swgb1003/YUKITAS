@@ -23,6 +23,8 @@ void main() {
       priceYen: 3200,
       isSos: true,
       sosReason: '高齢の家族宅',
+      parkingAvailable: true,
+      toolsProvided: false,
       beforeImageAsset: 'assets/images/before_driveway.png',
       status: RequestStatus.working,
       createdAt: createdAt,
@@ -63,5 +65,7 @@ void main() {
       disputedAt.millisecondsSinceEpoch,
     );
     expect(decoded.disputedBy, request.disputedBy);
+    expect(decoded.parkingAvailable, isTrue);
+    expect(decoded.toolsProvided, isFalse);
   });
 }

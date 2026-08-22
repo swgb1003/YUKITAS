@@ -33,6 +33,8 @@ class RequestSummary {
     required this.estimatedMinutes,
     required this.priceYen,
     required this.isSos,
+    required this.parkingAvailable,
+    required this.toolsProvided,
     required this.status,
     required this.createdAt,
   });
@@ -55,6 +57,13 @@ class RequestSummary {
   final int estimatedMinutes;
   final int priceYen;
   final bool isSos;
+
+  /// Whether a worker can park on site and whether tools are provided - see
+  /// [SnowRequest.parkingAvailable]/[SnowRequest.toolsProvided]. Safe to
+  /// publish: they describe the site, not the household.
+  final bool parkingAvailable;
+  final bool toolsProvided;
+
   final RequestStatus status;
   final DateTime createdAt;
 
@@ -96,6 +105,8 @@ class RequestSummary {
       estimatedMinutes: request.estimatedMinutes,
       priceYen: request.priceYen,
       isSos: request.isSos,
+      parkingAvailable: request.parkingAvailable,
+      toolsProvided: request.toolsProvided,
       status: request.status,
       createdAt: request.createdAt,
     );

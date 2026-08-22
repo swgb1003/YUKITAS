@@ -10,6 +10,8 @@ SnowRequest _request({
   required RequestStatus status,
   double latitude = 37.9161,
   double longitude = 139.0364,
+  bool parkingAvailable = true,
+  bool toolsProvided = true,
 }) {
   return SnowRequest(
     id: id,
@@ -26,6 +28,8 @@ SnowRequest _request({
     priceYen: 3200,
     isSos: true,
     sosReason: '高齢の家族が一人で暮らしています',
+    parkingAvailable: parkingAvailable,
+    toolsProvided: toolsProvided,
     beforeImageAsset: 'requestMedia/$id/before/owner-1/photo.jpg',
     status: status,
     createdAt: DateTime(2026, 8, 13),
@@ -91,6 +95,20 @@ void main() {
         _request(id: 'r1', status: RequestStatus.waiting),
       );
       expect(summary.isSos, isTrue);
+    });
+
+    test('publishes parking and tool availability - they describe the site, '
+        'not who lives there', () {
+      final summary = RequestSummary.fromRequest(
+        _request(
+          id: 'r1',
+          status: RequestStatus.waiting,
+          parkingAvailable: true,
+          toolsProvided: false,
+        ),
+      );
+      expect(summary.parkingAvailable, isTrue);
+      expect(summary.toolsProvided, isFalse);
     });
   });
 

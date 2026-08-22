@@ -171,4 +171,51 @@ void main() {
       expect(find.text('問題が報告されています'), findsNothing);
     },
   );
+
+  testWidgets(
+    'a disputed request does not hijack the home screen on every app launch',
+    (tester) async {
+      // Simulates reopening the app: a fresh ModeShell whose in-memory
+      // tracking ids start null, backed by a repository that already holds
+      // a disputed request from a previous session - _finishedRequestIds is
+      // in-memory too, so it is also empty here, exactly as it would be
+      // after a real restart, regardless of whether "ホームに戻る" was ever
+      // tapped before.
+      final request = SnowRequest(
+        id: 'stale-dispute',
+        ownerId: 'demo-worker-takumi',
+        placeName: '新潟の実家',
+        approximateAddress: '新潟市中央区',
+        latitude: 37.9161,
+        longitude: 139.0364,
+        workAreas: const ['屋根の雪下ろし'],
+        areaSqm: 18,
+        snowDepthCm: 28,
+        difficulty: 3,
+        estimatedMinutes: 45,
+        priceYen: 3200,
+        isSos: false,
+        sosReason: null,
+        beforeImageAsset: 'assets/images/before_driveway.png',
+        status: RequestStatus.disputed,
+        workerId: 'worker-1',
+        workerName: '佐藤 拓海さん',
+        acceptedAt: DateTime(2026, 8, 13, 9),
+        createdAt: DateTime(2026, 8, 13),
+        disputeReason: '雪下ろしをさせられそうになった',
+        disputedBy: 'worker-1',
+        disputedAt: DateTime(2026, 8, 13, 10),
+      );
+      final repository = InMemoryRequestRepository(seedRequests: [request]);
+      addTearDown(repository.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(home: ModeShell(repository: repository)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('問題が報告されています'), findsNothing);
+      expect(find.text('雪かきを依頼する'), findsOneWidget);
+    },
+  );
 }
